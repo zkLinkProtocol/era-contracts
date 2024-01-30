@@ -8,7 +8,7 @@ import {IExecutor, L2_LOG_ADDRESS_OFFSET, L2_LOG_KEY_OFFSET, L2_LOG_VALUE_OFFSET
 import {PriorityQueue, PriorityOperation} from "../libraries/PriorityQueue.sol";
 import {UncheckedMath} from "../../common/libraries/UncheckedMath.sol";
 import {UnsafeBytes} from "../../common/libraries/UnsafeBytes.sol";
-import {VerifierParams} from "../Storage.sol";
+import {VerifierParams, SecondaryChainOp, SecondaryChain} from "../Storage.sol";
 import {L2_BOOTLOADER_ADDRESS, L2_TO_L1_MESSENGER_SYSTEM_CONTRACT_ADDR, L2_SYSTEM_CONTEXT_SYSTEM_CONTRACT_ADDR} from "../../common/L2ContractAddresses.sol";
 
 // While formally the following import is not used, it is needed to inherit documentation from it
@@ -263,6 +263,12 @@ contract ExecutorFacet is Base, IExecutor {
 
         for (uint256 i = 0; i < _nPriorityOps; i = i.uncheckedInc()) {
             PriorityOperation memory priorityOp = s.priorityQueue.popFront();
+            SecondaryChainOp memory secondaryChainOp = s.canonicalTxToSecondaryChainOp[priorityOp.canonicalTxHash];
+            if (secondaryChainOp.gateway != address(0)) {
+                // priority op of secondary chain should be synced
+                SecondaryChain memory secondaryChain = s.secondaryChains[secondaryChainOp.gateway];
+                require(secondaryChain.totalSyncedPriorityTxs > secondaryChainOp.priorityOpId, "ccc");
+            }
             concatHash = keccak256(abi.encode(concatHash, priorityOp.canonicalTxHash));
         }
     }
@@ -284,6 +290,28 @@ contract ExecutorFacet is Base, IExecutor {
 
         // Save root hash of L2 -> L1 logs tree
         s.l2LogsRootHashes[currentBatchNumber] = _storedBatch.l2LogsTreeRoot;
+    }
+
+    /// @notice Check if all secondary ops were synced
+    /// @param _batchesData Data of the batches to be executed.
+    function isBatchesSynced(StoredBatchInfo[] calldata _batchesData) external view returns (bool) {
+        uint256 nBatches = _batchesData.length;
+        uint256 opIndex = 0;
+        for (uint256 i = 0; i < nBatches; i = i.uncheckedInc()) {
+            StoredBatchInfo memory _storedBatch = _batchesData[i];
+            for (uint256 j = 0; j < _storedBatch.numberOfLayer1Txs; j = j.uncheckedInc()) {
+                PriorityOperation memory priorityOp = s.priorityQueue.index(opIndex);
+                SecondaryChainOp memory secondaryChainOp = s.canonicalTxToSecondaryChainOp[priorityOp.canonicalTxHash];
+                if (secondaryChainOp.gateway != address(0)) {
+                    SecondaryChain memory secondaryChain = s.secondaryChains[secondaryChainOp.gateway];
+                    if (secondaryChain.totalSyncedPriorityTxs <= secondaryChainOp.priorityOpId) {
+                        return false;
+                    }
+                }
+                opIndex = opIndex.uncheckedInc();
+            }
+        }
+        return true;
     }
 
     /// @inheritdoc IExecutor

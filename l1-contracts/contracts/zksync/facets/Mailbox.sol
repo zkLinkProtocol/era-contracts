@@ -8,7 +8,7 @@ import {IMailbox, TxStatus} from "../interfaces/IMailbox.sol";
 import {Merkle} from "../libraries/Merkle.sol";
 import {PriorityQueue, PriorityOperation} from "../libraries/PriorityQueue.sol";
 import {TransactionValidator} from "../libraries/TransactionValidator.sol";
-import {L2Message, L2Log, FeeParams, PubdataPricingMode} from "../Storage.sol";
+import {L2Message, L2Log, FeeParams, PubdataPricingMode, SecondaryChain, SecondaryChainSyncStatus, SecondaryChainOp} from "../Storage.sol";
 import {UncheckedMath} from "../../common/libraries/UncheckedMath.sol";
 import {UnsafeBytes} from "../../common/libraries/UnsafeBytes.sol";
 import {L2ContractHelper} from "../../common/libraries/L2ContractHelper.sol";
@@ -223,6 +223,62 @@ contract MailboxFacet is Base, IMailbox {
             false,
             _refundRecipient
         );
+    }
+
+    /// @inheritdoc IMailbox
+    function forwardRequestL2Transaction(
+        address _secondaryChainGateway,
+        ForwardL2Request calldata _request
+    ) external payable nonReentrant onlyValidator returns (bytes32 canonicalTxHash) {
+        {
+            SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
+            require(secondaryChain.valid, "fsc");
+            require(secondaryChain.totalPriorityTxs == _request.txId, "fst");
+
+            bytes32 secondaryChainCanonicalTxHash = keccak256(abi.encode(_request));
+            SecondaryChainSyncStatus memory syncStatus;
+            if (secondaryChain.totalPriorityTxs == 0) {
+                syncStatus.hash = secondaryChainCanonicalTxHash;
+                syncStatus.amount = _request.l2Value;
+            } else {
+                syncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][secondaryChain.totalPriorityTxs - 1];
+                syncStatus.hash = keccak256(abi.encodePacked(syncStatus.hash, secondaryChainCanonicalTxHash));
+                syncStatus.amount = syncStatus.amount + _request.l2Value;
+            }
+            s.secondaryChainSyncStatus[_secondaryChainGateway][secondaryChain.totalPriorityTxs] = syncStatus;
+            secondaryChain.totalPriorityTxs = secondaryChain.totalPriorityTxs + 1;
+            s.secondaryChains[_secondaryChainGateway] = secondaryChain;
+        }
+
+        // Here we manually assign fields for the struct to prevent "stack too deep" error
+        WritePriorityOpParams memory params;
+
+        params.sender = _request.sender;
+        params.txId = s.priorityQueue.getTotalPriorityTxs();
+        params.l2Value = _request.l2Value;
+        params.contractAddressL2 = _request.contractAddressL2;
+        params.expirationTimestamp = uint64(block.timestamp + PRIORITY_EXPIRATION); // Safe to cast
+        params.l2GasLimit = _request.l2GasLimit;
+
+        // Checking that the user provided enough ether to pay for the transaction.
+        // Using a new scope to prevent "stack too deep" error
+        {
+            params.l2GasPrice = _deriveL2GasPrice(tx.gasprice, _request.l2GasPricePerPubdata);
+            uint256 baseCost = params.l2GasPrice * _request.l2GasLimit;
+            require(msg.value >= baseCost, "fmv"); // The `msg.value` doesn't cover the transaction cost
+            uint256 leftMsgValue = msg.value - baseCost;
+            if (leftMsgValue > 0) {
+                // solhint-disable-next-line avoid-low-level-calls
+                (bool success, ) = msg.sender.call{value: leftMsgValue}("");
+                require(success, "fse");
+            }
+            params.valueToMint = baseCost + _request.l2Value;
+        }
+        params.l2GasPricePerPubdata = _request.l2GasPricePerPubdata;
+        params.refundRecipient = _request.refundRecipient;
+
+        canonicalTxHash = _writePriorityOp(params, _request.l2CallData, _request.factoryDeps);
+        s.canonicalTxToSecondaryChainOp[canonicalTxHash] = SecondaryChainOp(_secondaryChainGateway, _request.txId);
     }
 
     function _requestL2Transaction(

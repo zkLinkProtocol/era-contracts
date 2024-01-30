@@ -90,6 +90,29 @@ interface IMailbox is IBase {
         address refundRecipient;
     }
 
+    /// @dev Internal structure that contains the parameters for the forwardRequestL2Transaction
+    /// @param sender The sender's address.
+    /// @param txId The id of the priority transaction.
+    /// @param contractAddressL2 The address of the contract on L2 to call.
+    /// @param l2Value The msg.value of the L2 transaction.
+    /// @param l2CallData The call data of the L2 transaction.
+    /// @param l2GasLimit The limit of the L2 gas for the L2 transaction
+    /// @param l2GasPrice The price of the L2 gas in Wei to be used for this transaction.
+    /// @param l2GasPricePerPubdata The price for a single pubdata byte in L2 gas.
+    /// @param refundRecipient The recipient of the refund for the transaction on L2. If the transaction fails, then
+    /// this address will receive the `l2Value`.
+    struct ForwardL2Request {
+        address sender;
+        uint256 txId;
+        address contractAddressL2;
+        uint256 l2Value;
+        bytes l2CallData;
+        uint256 l2GasLimit;
+        uint256 l2GasPricePerPubdata;
+        bytes[] factoryDeps;
+        address refundRecipient;
+    }
+
     /// @notice Prove that a specific arbitrary-length message was sent in a specific L2 batch number
     /// @param _l2BatchNumber The executed L2 batch number in which the message appeared
     /// @param _index The position in the L2 logs Merkle tree of the l2Log that was sent with the message
@@ -174,6 +197,15 @@ interface IMailbox is IBase {
         uint256 _l2GasPerPubdataByteLimit,
         bytes[] calldata _factoryDeps,
         address _refundRecipient
+    ) external payable returns (bytes32 canonicalTxHash);
+
+    /// @notice Request execution of L2 transaction from secondary chain.
+    /// @param _secondaryChainGateway The secondary chain gateway address
+    /// @param _request L2 request
+    /// @return canonicalTxHash The hash of the requested L2 transaction. This hash can be used to follow the transaction status
+    function forwardRequestL2Transaction(
+        address _secondaryChainGateway,
+        ForwardL2Request calldata _request
     ) external payable returns (bytes32 canonicalTxHash);
 
     /// @notice Estimates the cost in Ether of requesting execution of an L2 transaction from L1

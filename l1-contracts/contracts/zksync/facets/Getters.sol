@@ -3,7 +3,7 @@
 pragma solidity 0.8.20;
 
 import {Base} from "./Base.sol";
-import {VerifierParams} from "../Storage.sol";
+import {VerifierParams, SecondaryChain, SecondaryChainSyncStatus, SecondaryChainOp} from "../Storage.sol";
 import {Diamond} from "../libraries/Diamond.sol";
 import {PriorityQueue, PriorityOperation} from "../libraries/PriorityQueue.sol";
 import {UncheckedMath} from "../../common/libraries/UncheckedMath.sol";
@@ -26,6 +26,21 @@ contract GettersFacet is Base, IGetters, ILegacyGetters {
     /*//////////////////////////////////////////////////////////////
                             CUSTOM GETTERS
     //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IGetters
+    function getSecondaryChain(address gateway) external view returns (SecondaryChain memory) {
+        return s.secondaryChains[gateway];
+    }
+
+    /// @inheritdoc IGetters
+    function getSecondaryChainSyncStatus(address gateway, uint256 priorityOpId) external view returns (SecondaryChainSyncStatus memory) {
+        return s.secondaryChainSyncStatus[gateway][priorityOpId];
+    }
+
+    /// @inheritdoc IGetters
+    function getSecondaryChainOp(bytes32 canonicalTxHash) external view returns (SecondaryChainOp memory) {
+        return s.canonicalTxToSecondaryChainOp[canonicalTxHash];
+    }
 
     /// @inheritdoc IGetters
     function getVerifier() external view returns (address) {

@@ -1,4 +1,4 @@
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 import {PriorityQueueSharedTest} from "./_PriorityQueue_Shared.t.sol";
 

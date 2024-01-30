@@ -1,4 +1,4 @@
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 import {TransactionValidatorSharedTest} from "./_TransactionValidator_Shared.t.sol";
 import {IMailbox} from "solpp/zksync/interfaces/IMailbox.sol";

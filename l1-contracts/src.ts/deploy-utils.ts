@@ -48,9 +48,15 @@ export async function deployViaCreate2(
   const gasUsed = receipt.gasUsed;
   log(`${contractName} deployed, gasUsed: ${gasUsed.toString()}`);
 
-  const deployedBytecodeAfter = await deployWallet.provider.getCode(expectedAddress);
-  if (ethers.utils.hexDataLength(deployedBytecodeAfter) == 0) {
-    throw new Error("Failed to deploy bytecode via create2 factory");
+  while (true) {
+    const deployedBytecodeAfter = await deployWallet.provider.getCode(expectedAddress);
+    if (ethers.utils.hexDataLength(deployedBytecodeAfter) == 0) {
+      console.log("Failed to deploy bytecode via create2 factory, trying again");
+      await new Promise(r => setTimeout(r, 60000));
+    } else {
+      console.log(`Successfully deployed ${contractName} bytecode via create2 factory`);
+      break;
+    }
   }
 
   return [expectedAddress, tx.hash];

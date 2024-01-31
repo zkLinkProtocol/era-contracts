@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 
 import {IVerifier} from "./../zksync/interfaces/IVerifier.sol";
 import {PriorityQueue} from "./libraries/PriorityQueue.sol";
+import {IL2Gateway} from "./interfaces/IL2Gateway.sol";
 
 /// @notice Indicates whether an upgrade is initiated and if yes what type
 /// @param None Upgrade is NOT initiated
@@ -128,6 +129,7 @@ struct SecondaryChainOp {
 /// Their presence is maintained for compatibility and to prevent storage collision.
 struct AppStorage {
     /// @dev List of permitted secondary chain
+    IL2Gateway gateway;
     mapping(address secondaryChainGateway => SecondaryChain) secondaryChains;
     mapping(address secondaryChainGateway => mapping(uint256 secondaryChainPriorityOpId => SecondaryChainSyncStatus syncStatus)) secondaryChainSyncStatus;
     mapping(bytes32 canonicalTxHash => SecondaryChainOp secondaryChainOp) canonicalTxToSecondaryChainOp;

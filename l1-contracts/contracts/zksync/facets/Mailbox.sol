@@ -5,6 +5,7 @@ pragma solidity 0.8.20;
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IMailbox, TxStatus} from "../interfaces/IMailbox.sol";
+import {IZkLink} from "../interfaces/IZkLink.sol";
 import {Merkle} from "../libraries/Merkle.sol";
 import {PriorityQueue, PriorityOperation} from "../libraries/PriorityQueue.sol";
 import {TransactionValidator} from "../libraries/TransactionValidator.sol";
@@ -138,6 +139,49 @@ contract MailboxFacet is Base, IMailbox {
     ) public view returns (uint256) {
         uint256 l2GasPrice = _deriveL2GasPrice(_gasPrice, _l2GasPerPubdataByteLimit);
         return l2GasPrice * _l2GasLimit;
+    }
+
+    /// @inheritdoc IMailbox
+    function syncL2Requests(address _secondaryChainGateway, uint256 _newTotalSyncedPriorityTxs, bytes32 _syncHash, uint256 _forwardEthAmount) external payable onlyGateway {
+        // Secondary chain should be registered
+        SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
+        require(secondaryChain.valid, "ssc");
+
+        // Check newTotalSyncedPriorityTxs
+        require(_newTotalSyncedPriorityTxs <= secondaryChain.totalPriorityTxs && _newTotalSyncedPriorityTxs > secondaryChain.totalSyncedPriorityTxs, "spt");
+
+        // Check sync hash at new point
+        SecondaryChainSyncStatus memory syncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][_newTotalSyncedPriorityTxs - 1];
+        require(syncStatus.hash == _syncHash, "ssh");
+
+        // Check forward eth amount
+        SecondaryChainSyncStatus memory lastSyncStatus;
+        if (secondaryChain.totalSyncedPriorityTxs > 0) {
+            lastSyncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][secondaryChain.totalSyncedPriorityTxs - 1];
+        }
+        require(syncStatus.amount - lastSyncStatus.amount == _forwardEthAmount, "sfm");
+        require(msg.value == _forwardEthAmount, "smv");
+
+        // Update totalSyncedPriorityTxs
+        secondaryChain.totalSyncedPriorityTxs = _newTotalSyncedPriorityTxs;
+        s.secondaryChains[_secondaryChainGateway] = secondaryChain;
+        emit SyncL2Requests(_secondaryChainGateway, _newTotalSyncedPriorityTxs, _syncHash, _forwardEthAmount);
+    }
+
+    /// @inheritdoc IMailbox
+    function syncBatchRoot(address _secondaryChainGateway, uint256 _batchNumber) external payable {
+        // Secondary chain should be registered
+        SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
+        require(secondaryChain.valid, "bsc");
+
+        // The batch should be executed
+        bytes32 l2LogsRootHash = s.l2LogsRootHashes[_batchNumber];
+        require(l2LogsRootHash != bytes32(0), "bsl");
+
+        // Send batch root to secondary chain by gateway
+        bytes memory finalCallData = abi.encodeCall(IZkLink.syncBatchRoot, (_batchNumber, l2LogsRootHash));
+        bytes memory callData = abi.encode(_secondaryChainGateway, finalCallData);
+        s.gateway.sendMessage{value: msg.value}(0, callData);
     }
 
     /// @notice Derives the price for L2 gas in ETH to be paid.

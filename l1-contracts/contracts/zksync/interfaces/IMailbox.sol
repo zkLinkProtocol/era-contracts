@@ -219,6 +219,18 @@ interface IMailbox is IBase {
         uint256 _l2GasPerPubdataByteLimit
     ) external view returns (uint256);
 
+    /// @notice Receive sync status from secondary chain
+    /// @param _secondaryChainGateway The secondary chain gateway address
+    /// @param _newTotalSyncedPriorityTxs New sync point
+    /// @param _syncHash New sync hash
+    /// @param _forwardEthAmount The difference eth amount between two sync points
+    function syncL2Requests(address _secondaryChainGateway, uint256 _newTotalSyncedPriorityTxs, bytes32 _syncHash, uint256 _forwardEthAmount) external payable;
+
+    /// @notice Send batch root to primary chain
+    /// @param _secondaryChainGateway The secondary chain
+    /// @param _batchNumber The batch number
+    function syncBatchRoot(address _secondaryChainGateway, uint256 _batchNumber) external payable;
+
     /// @notice New priority request event. Emitted when a request is placed into the priority queue
     /// @param txId Serial number of the priority operation
     /// @param txHash keccak256 hash of encoded transaction representation
@@ -237,4 +249,11 @@ interface IMailbox is IBase {
     /// @param to The address to which the funds were sent
     /// @param amount The amount of funds that were sent
     event EthWithdrawalFinalized(address indexed to, uint256 amount);
+
+    /// @notice Emitted when receive sync status from secondary chain.
+    /// @param secondaryChainGateway The secondary chain gateway
+    /// @param totalSyncedPriorityTxs New sync point
+    /// @param syncHash New sync hash
+    /// @param forwardEthAmount The difference eth amount between two sync points
+    event SyncL2Requests(address indexed secondaryChainGateway, uint256 indexed totalSyncedPriorityTxs, bytes32 indexed syncHash, uint256 forwardEthAmount);
 }

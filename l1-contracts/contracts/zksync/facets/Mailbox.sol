@@ -187,6 +187,19 @@ contract MailboxFacet is Base, IMailbox {
         emit SyncBatchRoot(_secondaryChainGateway, _batchNumber);
     }
 
+    /// @inheritdoc IMailbox
+    function syncL2TxHash(bytes32 _l2TxHash) external payable {
+        SecondaryChainOp memory op = s.canonicalTxToSecondaryChainOp[_l2TxHash];
+        require(op.gateway != address(0), "tsc");
+
+        // Send l2 tx hash to secondary chain by gateway
+        bytes memory finalCallData = abi.encodeCall(IZkLink.syncL2TxHash, (_l2TxHash, op.canonicalTxHash));
+        bytes memory callData = abi.encode(op.gateway, finalCallData);
+        // Forward fee to gateway
+        s.gateway.sendMessage{value: msg.value}(0, callData);
+        emit SyncL2TxHash(_l2TxHash);
+    }
+
     /// @notice Derives the price for L2 gas in ETH to be paid.
     /// @param _l1GasPrice The gas price on L1.
     /// @param _gasPerPubdata The price for each pubdata byte in L2 gas

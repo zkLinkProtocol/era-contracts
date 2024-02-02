@@ -231,6 +231,10 @@ interface IMailbox is IBase {
     /// @param _batchNumber The batch number
     function syncBatchRoot(address _secondaryChainGateway, uint256 _batchNumber) external payable;
 
+    /// @notice Send l2 tx hash to secondary chain
+    /// @param _l2TxHash The l2 tx hash
+    function syncL2TxHash(bytes32 _l2TxHash) external payable;
+
     /// @notice New priority request event. Emitted when a request is placed into the priority queue
     /// @param txId Serial number of the priority operation
     /// @param txHash keccak256 hash of encoded transaction representation
@@ -255,10 +259,14 @@ interface IMailbox is IBase {
     /// @param totalSyncedPriorityTxs New sync point
     /// @param syncHash New sync hash
     /// @param forwardEthAmount The difference eth amount between two sync points
-    event SyncL2Requests(address indexed secondaryChainGateway, uint256 indexed totalSyncedPriorityTxs, bytes32 indexed syncHash, uint256 forwardEthAmount);
+    event SyncL2Requests(address secondaryChainGateway, uint256 totalSyncedPriorityTxs, bytes32 syncHash, uint256 forwardEthAmount);
 
     /// @notice Emitted when send batch root to secondary chain.
     /// @param secondaryChainGateway The secondary chain gateway
     /// @param batchNumber The batch number
-    event SyncBatchRoot(address indexed secondaryChainGateway, uint256 indexed batchNumber);
+    event SyncBatchRoot(address secondaryChainGateway, uint256 batchNumber);
+
+    /// @notice Emitted when send l2 tx hash to secondary chain.
+    /// @param l2TxHash The l2 tx hash
+    event SyncL2TxHash(bytes32 l2TxHash);
 }

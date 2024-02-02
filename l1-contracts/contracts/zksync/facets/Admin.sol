@@ -19,6 +19,12 @@ contract AdminFacet is Base, IAdmin {
     string public constant override getName = "AdminFacet";
 
     /// @inheritdoc IAdmin
+    function setSecondaryChainGateway(address _gateway, bool _active) external onlyGateway{
+        s.secondaryChains[_gateway].valid = _active;
+        emit SecondaryChainStatusUpdate(_gateway, _active);
+    }
+
+    /// @inheritdoc IAdmin
     function setPendingGovernor(address _newPendingGovernor) external onlyGovernor {
         // Save previous value into the stack to put it into the event later
         address oldPendingGovernor = s.pendingGovernor;

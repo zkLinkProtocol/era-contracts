@@ -10,6 +10,11 @@ import {FeeParams} from "../Storage.sol";
 /// @author Matter Labs
 /// @custom:security-contact security@matterlabs.dev
 interface IAdmin is IBase {
+    /// @notice Update secondary chain status
+    /// @param _gateway The secondary chain gateway on local chain
+    /// @param _active Active flag
+    function setSecondaryChainGateway(address _gateway, bool _active) external;
+
     /// @notice Starts the transfer of governor rights. Only the current governor can propose a new pending one.
     /// @notice New governor can accept governor rights by calling `acceptGovernor` function.
     /// @param _newPendingGovernor Address of the new governor
@@ -55,6 +60,9 @@ interface IAdmin is IBase {
     /// @notice Unpause the functionality of all freezable facets & their selectors
     /// @dev Both the governor and its owner can unfreeze Diamond Proxy
     function unfreezeDiamond() external;
+
+    /// @notice SecondaryChain's status changed
+    event SecondaryChainStatusUpdate(address indexed gateway, bool isActive);
 
     /// @notice Porter availability status changes
     event IsPorterAvailableStatusUpdate(bool isPorterAvailable);

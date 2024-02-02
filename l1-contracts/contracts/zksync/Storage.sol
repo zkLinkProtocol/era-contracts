@@ -117,9 +117,11 @@ struct SecondaryChainSyncStatus {
 /// @dev The secondary chain info of the priority op
 /// @param gateway The secondary chain gateway
 /// @param priorityOpId The priority id of secondary chain
+/// @param canonicalTxHash The canonical tx hash of secondary chain
 struct SecondaryChainOp {
     address gateway;
     uint256 priorityOpId;
+    bytes32 canonicalTxHash;
 }
 
 /// @dev storing all storage variables for zkSync facets

@@ -3,6 +3,7 @@
 pragma solidity 0.8.20;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {IMailbox, TxStatus} from "../interfaces/IMailbox.sol";
 import {IZkLink} from "../interfaces/IZkLink.sol";
@@ -181,7 +182,9 @@ contract MailboxFacet is Base, IMailbox {
         // Send batch root to secondary chain by gateway
         bytes memory finalCallData = abi.encodeCall(IZkLink.syncBatchRoot, (_batchNumber, l2LogsRootHash));
         bytes memory callData = abi.encode(_secondaryChainGateway, finalCallData);
+        // Forward fee to gateway
         s.gateway.sendMessage{value: msg.value}(0, callData);
+        emit SyncBatchRoot(_secondaryChainGateway, _batchNumber);
     }
 
     /// @notice Derives the price for L2 gas in ETH to be paid.
@@ -270,33 +273,37 @@ contract MailboxFacet is Base, IMailbox {
     }
 
     /// @inheritdoc IMailbox
-    function forwardRequestL2Transaction(
-        address _secondaryChainGateway,
-        ForwardL2Request calldata _request
-    ) external payable nonReentrant onlyValidator returns (bytes32 canonicalTxHash) {
+    function forwardRequestL2Transaction(ForwardL2Request calldata _request) external payable nonReentrant onlyValidator returns (bytes32 canonicalTxHash) {
+        bytes32 secondaryChainCanonicalTxHash = keccak256(abi.encode(_request));
         {
-            SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
+            SecondaryChain memory secondaryChain = s.secondaryChains[_request.gateway];
             require(secondaryChain.valid, "fsc");
             require(secondaryChain.totalPriorityTxs == _request.txId, "fst");
 
-            bytes32 secondaryChainCanonicalTxHash = keccak256(abi.encode(_request));
             SecondaryChainSyncStatus memory syncStatus;
             if (secondaryChain.totalPriorityTxs == 0) {
                 syncStatus.hash = secondaryChainCanonicalTxHash;
                 syncStatus.amount = _request.l2Value;
             } else {
-                syncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][secondaryChain.totalPriorityTxs - 1];
+                syncStatus = s.secondaryChainSyncStatus[_request.gateway][secondaryChain.totalPriorityTxs - 1];
                 syncStatus.hash = keccak256(abi.encodePacked(syncStatus.hash, secondaryChainCanonicalTxHash));
                 syncStatus.amount = syncStatus.amount + _request.l2Value;
             }
-            s.secondaryChainSyncStatus[_secondaryChainGateway][secondaryChain.totalPriorityTxs] = syncStatus;
+            s.secondaryChainSyncStatus[_request.gateway][secondaryChain.totalPriorityTxs] = syncStatus;
             secondaryChain.totalPriorityTxs = secondaryChain.totalPriorityTxs + 1;
-            s.secondaryChains[_secondaryChainGateway] = secondaryChain;
+            s.secondaryChains[_request.gateway] = secondaryChain;
         }
 
         // Here we manually assign fields for the struct to prevent "stack too deep" error
         WritePriorityOpParams memory params;
 
+        // Prevent contract address conflicts
+        {
+            if (_request.isContractCall) {
+                address originAddress = AddressAliasHelper.undoL1ToL2Alias(_request.sender);
+                require(!Address.isContract(originAddress), "fcc");
+            }
+        }
         params.sender = _request.sender;
         params.txId = s.priorityQueue.getTotalPriorityTxs();
         params.l2Value = _request.l2Value;
@@ -322,7 +329,7 @@ contract MailboxFacet is Base, IMailbox {
         params.refundRecipient = _request.refundRecipient;
 
         canonicalTxHash = _writePriorityOp(params, _request.l2CallData, _request.factoryDeps);
-        s.canonicalTxToSecondaryChainOp[canonicalTxHash] = SecondaryChainOp(_secondaryChainGateway, _request.txId);
+        s.canonicalTxToSecondaryChainOp[canonicalTxHash] = SecondaryChainOp(_request.gateway, _request.txId, secondaryChainCanonicalTxHash);
     }
 
     function _requestL2Transaction(

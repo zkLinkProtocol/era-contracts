@@ -91,6 +91,8 @@ interface IMailbox is IBase {
     }
 
     /// @dev Internal structure that contains the parameters for the forwardRequestL2Transaction
+    /// @param gateway The secondary chain gateway;
+    /// @param isContractCall It's true when the request come from a contract.
     /// @param sender The sender's address.
     /// @param txId The id of the priority transaction.
     /// @param contractAddressL2 The address of the contract on L2 to call.
@@ -102,6 +104,8 @@ interface IMailbox is IBase {
     /// @param refundRecipient The recipient of the refund for the transaction on L2. If the transaction fails, then
     /// this address will receive the `l2Value`.
     struct ForwardL2Request {
+        address gateway;
+        bool isContractCall;
         address sender;
         uint256 txId;
         address contractAddressL2;
@@ -200,13 +204,9 @@ interface IMailbox is IBase {
     ) external payable returns (bytes32 canonicalTxHash);
 
     /// @notice Request execution of L2 transaction from secondary chain.
-    /// @param _secondaryChainGateway The secondary chain gateway address
     /// @param _request L2 request
     /// @return canonicalTxHash The hash of the requested L2 transaction. This hash can be used to follow the transaction status
-    function forwardRequestL2Transaction(
-        address _secondaryChainGateway,
-        ForwardL2Request calldata _request
-    ) external payable returns (bytes32 canonicalTxHash);
+    function forwardRequestL2Transaction(ForwardL2Request calldata _request) external payable returns (bytes32 canonicalTxHash);
 
     /// @notice Estimates the cost in Ether of requesting execution of an L2 transaction from L1
     /// @param _gasPrice expected L1 gas price at which the user requests the transaction execution
@@ -226,7 +226,7 @@ interface IMailbox is IBase {
     /// @param _forwardEthAmount The difference eth amount between two sync points
     function syncL2Requests(address _secondaryChainGateway, uint256 _newTotalSyncedPriorityTxs, bytes32 _syncHash, uint256 _forwardEthAmount) external payable;
 
-    /// @notice Send batch root to primary chain
+    /// @notice Send batch root to secondary chain
     /// @param _secondaryChainGateway The secondary chain
     /// @param _batchNumber The batch number
     function syncBatchRoot(address _secondaryChainGateway, uint256 _batchNumber) external payable;
@@ -256,4 +256,9 @@ interface IMailbox is IBase {
     /// @param syncHash New sync hash
     /// @param forwardEthAmount The difference eth amount between two sync points
     event SyncL2Requests(address indexed secondaryChainGateway, uint256 indexed totalSyncedPriorityTxs, bytes32 indexed syncHash, uint256 forwardEthAmount);
+
+    /// @notice Emitted when send batch root to secondary chain.
+    /// @param secondaryChainGateway The secondary chain gateway
+    /// @param batchNumber The batch number
+    event SyncBatchRoot(address indexed secondaryChainGateway, uint256 indexed batchNumber);
 }

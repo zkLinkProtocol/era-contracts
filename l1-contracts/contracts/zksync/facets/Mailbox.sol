@@ -193,7 +193,7 @@ contract MailboxFacet is Base, IMailbox {
         require(op.gateway != address(0), "tsc");
 
         // Send l2 tx hash to secondary chain by gateway
-        bytes memory finalCallData = abi.encodeCall(IZkLink.syncL2TxHash, (_l2TxHash, op.canonicalTxHash));
+        bytes memory finalCallData = abi.encodeCall(IZkLink.syncL2TxHash, (op.canonicalTxHash, _l2TxHash));
         bytes memory callData = abi.encode(op.gateway, finalCallData);
         // Forward fee to gateway
         s.gateway.sendMessage{value: msg.value}(0, callData);

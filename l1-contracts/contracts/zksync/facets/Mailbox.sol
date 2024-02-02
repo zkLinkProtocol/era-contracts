@@ -3,12 +3,14 @@
 pragma solidity 0.8.19;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {IMailbox, TxStatus} from "../interfaces/IMailbox.sol";
+import {IZkLink} from "../interfaces/IZkLink.sol";
 import {Merkle} from "../libraries/Merkle.sol";
 import {PriorityQueue, PriorityOperation} from "../libraries/PriorityQueue.sol";
 import {TransactionValidator} from "../libraries/TransactionValidator.sol";
-import {L2Message, L2Log, FeeParams, PubdataPricingMode} from "../Storage.sol";
+import {L2Message, L2Log, FeeParams, PubdataPricingMode, SecondaryChain, SecondaryChainSyncStatus, SecondaryChainOp} from "../Storage.sol";
 import {UncheckedMath} from "../../common/libraries/UncheckedMath.sol";
 import {UnsafeBytes} from "../../common/libraries/UnsafeBytes.sol";
 import {L2ContractHelper} from "../../common/libraries/L2ContractHelper.sol";
@@ -140,6 +142,64 @@ contract MailboxFacet is Base, IMailbox {
         return l2GasPrice * _l2GasLimit;
     }
 
+    /// @inheritdoc IMailbox
+    function syncL2Requests(address _secondaryChainGateway, uint256 _newTotalSyncedPriorityTxs, bytes32 _syncHash, uint256 _forwardEthAmount) external payable onlyGateway {
+        // Secondary chain should be registered
+        SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
+        require(secondaryChain.valid, "ssc");
+
+        // Check newTotalSyncedPriorityTxs
+        require(_newTotalSyncedPriorityTxs <= secondaryChain.totalPriorityTxs && _newTotalSyncedPriorityTxs > secondaryChain.totalSyncedPriorityTxs, "spt");
+
+        // Check sync hash at new point
+        SecondaryChainSyncStatus memory syncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][_newTotalSyncedPriorityTxs - 1];
+        require(syncStatus.hash == _syncHash, "ssh");
+
+        // Check forward eth amount
+        SecondaryChainSyncStatus memory lastSyncStatus;
+        if (secondaryChain.totalSyncedPriorityTxs > 0) {
+            lastSyncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][secondaryChain.totalSyncedPriorityTxs - 1];
+        }
+        require(syncStatus.amount - lastSyncStatus.amount == _forwardEthAmount, "sfm");
+        require(msg.value == _forwardEthAmount, "smv");
+
+        // Update totalSyncedPriorityTxs
+        secondaryChain.totalSyncedPriorityTxs = _newTotalSyncedPriorityTxs;
+        s.secondaryChains[_secondaryChainGateway] = secondaryChain;
+        emit SyncL2Requests(_secondaryChainGateway, _newTotalSyncedPriorityTxs, _syncHash, _forwardEthAmount);
+    }
+
+    /// @inheritdoc IMailbox
+    function syncBatchRoot(address _secondaryChainGateway, uint256 _batchNumber) external payable {
+        // Secondary chain should be registered
+        SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
+        require(secondaryChain.valid, "bsc");
+
+        // The batch should be executed
+        bytes32 l2LogsRootHash = s.l2LogsRootHashes[_batchNumber];
+        require(l2LogsRootHash != bytes32(0), "bsl");
+
+        // Send batch root to secondary chain by gateway
+        bytes memory finalCallData = abi.encodeCall(IZkLink.syncBatchRoot, (_batchNumber, l2LogsRootHash));
+        bytes memory callData = abi.encode(_secondaryChainGateway, finalCallData);
+        // Forward fee to gateway
+        s.gateway.sendMessage{value: msg.value}(0, callData);
+        emit SyncBatchRoot(_secondaryChainGateway, _batchNumber);
+    }
+
+    /// @inheritdoc IMailbox
+    function syncL2TxHash(bytes32 _l2TxHash) external payable {
+        SecondaryChainOp memory op = s.canonicalTxToSecondaryChainOp[_l2TxHash];
+        require(op.gateway != address(0), "tsc");
+
+        // Send l2 tx hash to secondary chain by gateway
+        bytes memory finalCallData = abi.encodeCall(IZkLink.syncL2TxHash, (op.canonicalTxHash, _l2TxHash));
+        bytes memory callData = abi.encode(op.gateway, finalCallData);
+        // Forward fee to gateway
+        s.gateway.sendMessage{value: msg.value}(0, callData);
+        emit SyncL2TxHash(_l2TxHash);
+    }
+
     /// @notice Derives the price for L2 gas in ETH to be paid.
     /// @param _l1GasPrice The gas price on L1.
     /// @param _gasPerPubdata The price for each pubdata byte in L2 gas
@@ -223,6 +283,66 @@ contract MailboxFacet is Base, IMailbox {
             false,
             _refundRecipient
         );
+    }
+
+    /// @inheritdoc IMailbox
+    function forwardRequestL2Transaction(ForwardL2Request calldata _request) external payable nonReentrant onlyValidator returns (bytes32 canonicalTxHash) {
+        bytes32 secondaryChainCanonicalTxHash = keccak256(abi.encode(_request));
+        {
+            SecondaryChain memory secondaryChain = s.secondaryChains[_request.gateway];
+            require(secondaryChain.valid, "fsc");
+            require(secondaryChain.totalPriorityTxs == _request.txId, "fst");
+
+            SecondaryChainSyncStatus memory syncStatus;
+            if (secondaryChain.totalPriorityTxs == 0) {
+                syncStatus.hash = secondaryChainCanonicalTxHash;
+                syncStatus.amount = _request.l2Value;
+            } else {
+                syncStatus = s.secondaryChainSyncStatus[_request.gateway][secondaryChain.totalPriorityTxs - 1];
+                syncStatus.hash = keccak256(abi.encodePacked(syncStatus.hash, secondaryChainCanonicalTxHash));
+                syncStatus.amount = syncStatus.amount + _request.l2Value;
+            }
+            s.secondaryChainSyncStatus[_request.gateway][secondaryChain.totalPriorityTxs] = syncStatus;
+            secondaryChain.totalPriorityTxs = secondaryChain.totalPriorityTxs + 1;
+            s.secondaryChains[_request.gateway] = secondaryChain;
+        }
+
+        // Here we manually assign fields for the struct to prevent "stack too deep" error
+        WritePriorityOpParams memory params;
+
+        // Prevent contract address conflicts
+        {
+            if (_request.isContractCall) {
+                address originAddress = AddressAliasHelper.undoL1ToL2Alias(_request.sender);
+                require(!Address.isContract(originAddress), "fcc");
+            }
+        }
+        params.sender = _request.sender;
+        params.txId = s.priorityQueue.getTotalPriorityTxs();
+        params.l2Value = _request.l2Value;
+        params.contractAddressL2 = _request.contractAddressL2;
+        params.expirationTimestamp = uint64(block.timestamp + PRIORITY_EXPIRATION); // Safe to cast
+        params.l2GasLimit = _request.l2GasLimit;
+
+        // Checking that the user provided enough ether to pay for the transaction.
+        // Using a new scope to prevent "stack too deep" error
+        {
+            params.l2GasPrice = _deriveL2GasPrice(tx.gasprice, _request.l2GasPricePerPubdata);
+            uint256 baseCost = params.l2GasPrice * _request.l2GasLimit;
+            require(msg.value >= baseCost, "fmv"); // The `msg.value` doesn't cover the transaction cost
+            uint256 leftMsgValue = msg.value - baseCost;
+            if (leftMsgValue > 0) {
+                // solhint-disable-next-line avoid-low-level-calls
+                (bool success, ) = msg.sender.call{value: leftMsgValue}("");
+                require(success, "fse");
+            }
+            params.valueToMint = baseCost + _request.l2Value;
+        }
+        params.l2GasPricePerPubdata = _request.l2GasPricePerPubdata;
+        params.refundRecipient = _request.refundRecipient;
+
+        canonicalTxHash = _writePriorityOp(params, _request.l2CallData, _request.factoryDeps);
+        s.canonicalTxToSecondaryChainOp[canonicalTxHash] = SecondaryChainOp(_request.gateway, _request.txId, secondaryChainCanonicalTxHash);
     }
 
     function _requestL2Transaction(

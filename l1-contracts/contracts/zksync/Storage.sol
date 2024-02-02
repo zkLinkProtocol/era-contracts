@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 
 import {IVerifier} from "./../zksync/interfaces/IVerifier.sol";
 import {PriorityQueue} from "./libraries/PriorityQueue.sol";
+import {IL2Gateway} from "./interfaces/IL2Gateway.sol";
 
 /// @notice Indicates whether an upgrade is initiated and if yes what type
 /// @param None Upgrade is NOT initiated
@@ -95,12 +96,45 @@ struct FeeParams {
     uint64 minimalL2GasPrice;
 }
 
+/// @dev The status of secondary chain
+/// @param valid Validator can forward l2 request of valid secondary chain
+/// @param totalPriorityTxs The total txs forwarded
+/// @param totalSyncedPriorityTxs The total txs synced
+struct SecondaryChain {
+    bool valid;
+    uint256 totalPriorityTxs;
+    uint256 totalSyncedPriorityTxs;
+}
+
+/// @dev The sync status for priority op of secondary chain
+/// @param hash The cumulative canonicalTxHash
+/// @param amount The cumulative l2 value
+struct SecondaryChainSyncStatus {
+    bytes32 hash;
+    uint256 amount;
+}
+
+/// @dev The secondary chain info of the priority op
+/// @param gateway The secondary chain gateway
+/// @param priorityOpId The priority id of secondary chain
+/// @param canonicalTxHash The canonical tx hash of secondary chain
+struct SecondaryChainOp {
+    address gateway;
+    uint256 priorityOpId;
+    bytes32 canonicalTxHash;
+}
+
 /// @dev storing all storage variables for zkSync facets
 /// NOTE: It is used in a proxy, so it is possible to add new variables to the end
 /// but NOT to modify already existing variables or change their order.
 /// NOTE: variables prefixed with '__DEPRECATED_' are deprecated and shouldn't be used.
 /// Their presence is maintained for compatibility and to prevent storage collision.
 struct AppStorage {
+    /// @dev List of permitted secondary chain
+    IL2Gateway gateway;
+    mapping(address secondaryChainGateway => SecondaryChain) secondaryChains;
+    mapping(address secondaryChainGateway => mapping(uint256 secondaryChainPriorityOpId => SecondaryChainSyncStatus syncStatus)) secondaryChainSyncStatus;
+    mapping(bytes32 canonicalTxHash => SecondaryChainOp secondaryChainOp) canonicalTxToSecondaryChainOp;
     /// @dev Storage of variables needed for deprecated diamond cut facet
     uint256[7] __DEPRECATED_diamondCutStorage;
     /// @notice Address which will exercise critical changes to the Diamond Proxy (upgrades, freezing & unfreezing)

@@ -90,6 +90,33 @@ interface IMailbox is IBase {
         address refundRecipient;
     }
 
+    /// @dev Internal structure that contains the parameters for the forwardRequestL2Transaction
+    /// @param gateway The secondary chain gateway;
+    /// @param isContractCall It's true when the request come from a contract.
+    /// @param sender The sender's address.
+    /// @param txId The id of the priority transaction.
+    /// @param contractAddressL2 The address of the contract on L2 to call.
+    /// @param l2Value The msg.value of the L2 transaction.
+    /// @param l2CallData The call data of the L2 transaction.
+    /// @param l2GasLimit The limit of the L2 gas for the L2 transaction
+    /// @param l2GasPrice The price of the L2 gas in Wei to be used for this transaction.
+    /// @param l2GasPricePerPubdata The price for a single pubdata byte in L2 gas.
+    /// @param refundRecipient The recipient of the refund for the transaction on L2. If the transaction fails, then
+    /// this address will receive the `l2Value`.
+    struct ForwardL2Request {
+        address gateway;
+        bool isContractCall;
+        address sender;
+        uint256 txId;
+        address contractAddressL2;
+        uint256 l2Value;
+        bytes l2CallData;
+        uint256 l2GasLimit;
+        uint256 l2GasPricePerPubdata;
+        bytes[] factoryDeps;
+        address refundRecipient;
+    }
+
     /// @notice Prove that a specific arbitrary-length message was sent in a specific L2 batch number
     /// @param _l2BatchNumber The executed L2 batch number in which the message appeared
     /// @param _index The position in the L2 logs Merkle tree of the l2Log that was sent with the message
@@ -176,6 +203,11 @@ interface IMailbox is IBase {
         address _refundRecipient
     ) external payable returns (bytes32 canonicalTxHash);
 
+    /// @notice Request execution of L2 transaction from secondary chain.
+    /// @param _request L2 request
+    /// @return canonicalTxHash The hash of the requested L2 transaction. This hash can be used to follow the transaction status
+    function forwardRequestL2Transaction(ForwardL2Request calldata _request) external payable returns (bytes32 canonicalTxHash);
+
     /// @notice Estimates the cost in Ether of requesting execution of an L2 transaction from L1
     /// @param _gasPrice expected L1 gas price at which the user requests the transaction execution
     /// @param _l2GasLimit Maximum amount of L2 gas that transaction can consume during execution on L2
@@ -186,6 +218,22 @@ interface IMailbox is IBase {
         uint256 _l2GasLimit,
         uint256 _l2GasPerPubdataByteLimit
     ) external view returns (uint256);
+
+    /// @notice Receive sync status from secondary chain
+    /// @param _secondaryChainGateway The secondary chain gateway address
+    /// @param _newTotalSyncedPriorityTxs New sync point
+    /// @param _syncHash New sync hash
+    /// @param _forwardEthAmount The difference eth amount between two sync points
+    function syncL2Requests(address _secondaryChainGateway, uint256 _newTotalSyncedPriorityTxs, bytes32 _syncHash, uint256 _forwardEthAmount) external payable;
+
+    /// @notice Send batch root to secondary chain
+    /// @param _secondaryChainGateway The secondary chain
+    /// @param _batchNumber The batch number
+    function syncBatchRoot(address _secondaryChainGateway, uint256 _batchNumber) external payable;
+
+    /// @notice Send l2 tx hash to secondary chain
+    /// @param _l2TxHash The l2 tx hash
+    function syncL2TxHash(bytes32 _l2TxHash) external payable;
 
     /// @notice New priority request event. Emitted when a request is placed into the priority queue
     /// @param txId Serial number of the priority operation
@@ -205,4 +253,20 @@ interface IMailbox is IBase {
     /// @param to The address to which the funds were sent
     /// @param amount The amount of funds that were sent
     event EthWithdrawalFinalized(address indexed to, uint256 amount);
+
+    /// @notice Emitted when receive sync status from secondary chain.
+    /// @param secondaryChainGateway The secondary chain gateway
+    /// @param totalSyncedPriorityTxs New sync point
+    /// @param syncHash New sync hash
+    /// @param forwardEthAmount The difference eth amount between two sync points
+    event SyncL2Requests(address secondaryChainGateway, uint256 totalSyncedPriorityTxs, bytes32 syncHash, uint256 forwardEthAmount);
+
+    /// @notice Emitted when send batch root to secondary chain.
+    /// @param secondaryChainGateway The secondary chain gateway
+    /// @param batchNumber The batch number
+    event SyncBatchRoot(address secondaryChainGateway, uint256 batchNumber);
+
+    /// @notice Emitted when send l2 tx hash to secondary chain.
+    /// @param l2TxHash The l2 tx hash
+    event SyncL2TxHash(bytes32 l2TxHash);
 }

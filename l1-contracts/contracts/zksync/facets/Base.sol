@@ -23,6 +23,12 @@ contract Base is ReentrancyGuard {
         _;
     }
 
+    /// @notice Checks that the message sender is L2 gateway
+    modifier onlyGateway() {
+        require(msg.sender == address(s.gateway), "1j");
+        _;
+    }
+
     /// @notice Checks if validator is active
     modifier onlyValidator() {
         require(s.validators[msg.sender], "1h"); // validator is not active

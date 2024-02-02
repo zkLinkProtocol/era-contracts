@@ -3,7 +3,7 @@
 pragma solidity 0.8.19;
 
 import {PriorityOperation} from "../libraries/PriorityQueue.sol";
-import {VerifierParams, UpgradeState} from "../Storage.sol";
+import {VerifierParams, UpgradeState, SecondaryChain, SecondaryChainSyncStatus, SecondaryChainOp} from "../Storage.sol";
 import "./IBase.sol";
 
 /// @title The interface of the Getters Contract that implements functions for getting contract state from outside the blockchain.
@@ -13,6 +13,15 @@ interface IGetters is IBase {
     /*//////////////////////////////////////////////////////////////
                             CUSTOM GETTERS
     //////////////////////////////////////////////////////////////*/
+
+    /// @return The secondary chain status
+    function getSecondaryChain(address gateway) external view returns (SecondaryChain memory);
+
+    /// @return The secondary chain op sync status
+    function getSecondaryChainSyncStatus(address gateway, uint256 priorityOpId) external view returns (SecondaryChainSyncStatus memory);
+
+    /// @return The secondary chain op info bind with tx
+    function getSecondaryChainOp(bytes32 canonicalTxHash) external view returns (SecondaryChainOp memory);
 
     /// @return The address of the verifier smart contract
     function getVerifier() external view returns (address);

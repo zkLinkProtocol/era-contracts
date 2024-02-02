@@ -7,6 +7,7 @@ import {Diamond} from "../libraries/Diamond.sol";
 import {MAX_GAS_PER_TRANSACTION} from "../Config.sol";
 import {FeeParams} from "../Storage.sol";
 import {Base} from "./Base.sol";
+import {IL2Gateway} from "../interfaces/IL2Gateway.sol";
 
 // While formally the following import is not used, it is needed to inherit documentation from it
 import {IBase} from "../interfaces/IBase.sol";
@@ -17,6 +18,13 @@ import {IBase} from "../interfaces/IBase.sol";
 contract AdminFacet is Base, IAdmin {
     /// @inheritdoc IBase
     string public constant override getName = "AdminFacet";
+
+    /// @inheritdoc IAdmin
+    function setGateway(IL2Gateway _gateway) external onlyGovernor{
+        require(address(s.gateway) == address(0), "g9");
+        s.gateway = _gateway;
+        emit InitGateway(_gateway);
+    }
 
     /// @inheritdoc IAdmin
     function setSecondaryChainGateway(address _gateway, bool _active) external onlyGateway{

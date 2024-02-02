@@ -5,11 +5,16 @@ pragma solidity 0.8.19;
 import {IBase} from "./IBase.sol";
 import {Diamond} from "../libraries/Diamond.sol";
 import {FeeParams} from "../Storage.sol";
+import {IL2Gateway} from "./IL2Gateway.sol";
 
 /// @title The interface of the Admin Contract that controls access rights for contract management.
 /// @author Matter Labs
 /// @custom:security-contact security@matterlabs.dev
 interface IAdmin is IBase {
+    /// @notice Init gateway
+    /// @param _gateway The gateway on local chain
+    function setGateway(IL2Gateway _gateway) external;
+
     /// @notice Update secondary chain status
     /// @param _gateway The secondary chain gateway on local chain
     /// @param _active Active flag
@@ -60,6 +65,9 @@ interface IAdmin is IBase {
     /// @notice Unpause the functionality of all freezable facets & their selectors
     /// @dev Both the governor and its owner can unfreeze Diamond Proxy
     function unfreezeDiamond() external;
+
+    /// @notice Gateway init
+    event InitGateway(IL2Gateway gateway);
 
     /// @notice SecondaryChain's status changed
     event SecondaryChainStatusUpdate(address indexed gateway, bool isActive);

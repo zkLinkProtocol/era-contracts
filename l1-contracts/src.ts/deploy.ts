@@ -152,7 +152,7 @@ export class Deployer {
   }
 
   public async deployGovernance(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2(
       "Governance",
       // TODO: load parameters from config
@@ -169,7 +169,7 @@ export class Deployer {
   }
 
   public async deployMailboxFacet(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2("MailboxFacet", [], create2Salt, ethTxOptions);
 
     if (this.verbose) {
@@ -180,7 +180,7 @@ export class Deployer {
   }
 
   public async deployAdminFacet(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2("AdminFacet", [], create2Salt, ethTxOptions);
 
     if (this.verbose) {
@@ -191,7 +191,7 @@ export class Deployer {
   }
 
   public async deployExecutorFacet(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2("ExecutorFacet", [], create2Salt, ethTxOptions);
 
     if (this.verbose) {
@@ -202,7 +202,7 @@ export class Deployer {
   }
 
   public async deployGettersFacet(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2("GettersFacet", [], create2Salt, ethTxOptions);
 
     if (this.verbose) {
@@ -213,7 +213,7 @@ export class Deployer {
   }
 
   public async deployVerifier(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2("Verifier", [], create2Salt, ethTxOptions);
 
     if (this.verbose) {
@@ -224,7 +224,7 @@ export class Deployer {
   }
 
   public async deployERC20BridgeImplementation(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2(
       "L1ERC20Bridge",
       [this.addresses.ZkSync.DiamondProxy],
@@ -240,7 +240,7 @@ export class Deployer {
   }
 
   public async deployERC20BridgeProxy(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2(
       "TransparentUpgradeableProxy",
       [this.addresses.Bridges.ERC20BridgeImplementation, this.ownerAddress, "0x"],
@@ -256,7 +256,7 @@ export class Deployer {
   }
 
   public async deployWethToken(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2("WETH9", [], create2Salt, ethTxOptions);
 
     if (this.verbose) {
@@ -268,7 +268,7 @@ export class Deployer {
     const tokens = getTokens(process.env.CHAIN_ETH_NETWORK || "localhost");
     const l1WethToken = tokens.find((token: { symbol: string }) => token.symbol == "WETH")!.address;
 
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2(
       "L1WethBridge",
       [l1WethToken, this.addresses.ZkSync.DiamondProxy],
@@ -284,7 +284,7 @@ export class Deployer {
   }
 
   public async deployWethBridgeProxy(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2(
       "TransparentUpgradeableProxy",
       [this.addresses.Bridges.WethBridgeImplementation, this.ownerAddress, "0x"],
@@ -300,7 +300,7 @@ export class Deployer {
   }
 
   public async deployDiamondInit(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2("DiamondInit", [], create2Salt, ethTxOptions);
 
     if (this.verbose) {
@@ -315,7 +315,7 @@ export class Deployer {
     contractVersion: number,
     ethTxOptions: ethers.providers.TransactionRequest
   ) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2(
       `DiamondUpgradeInit${contractVersion}`,
       [],
@@ -331,7 +331,7 @@ export class Deployer {
   }
 
   public async deployDefaultUpgrade(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2("DefaultUpgrade", [], create2Salt, ethTxOptions);
 
     if (this.verbose) {
@@ -342,7 +342,7 @@ export class Deployer {
   }
 
   public async deployDiamondProxy(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
 
     const chainId = getNumberFromEnv("ETH_CLIENT_CHAIN_ID");
     const initialDiamondCut = await this.initialProxyDiamondCut();
@@ -364,14 +364,11 @@ export class Deployer {
     nonce = nonce ? parseInt(nonce) : await this.deployWallet.getTransactionCount();
 
     // deploy zkSync contract
-    const independentZkSyncDeployPromises = [
-      this.deployMailboxFacet(create2Salt, { gasPrice, nonce }),
-      this.deployExecutorFacet(create2Salt, { gasPrice, nonce: nonce + 1 }),
-      this.deployAdminFacet(create2Salt, { gasPrice, nonce: nonce + 2 }),
-      this.deployGettersFacet(create2Salt, { gasPrice, nonce: nonce + 3 }),
-      this.deployDiamondInit(create2Salt, { gasPrice, nonce: nonce + 4 }),
-    ];
-    await Promise.all(independentZkSyncDeployPromises);
+    await this.deployMailboxFacet(create2Salt, { gasPrice, nonce });
+    await this.deployExecutorFacet(create2Salt, { gasPrice, nonce: nonce + 1 });
+    await this.deployAdminFacet(create2Salt, { gasPrice, nonce: nonce + 2 });
+    await this.deployGettersFacet(create2Salt, { gasPrice, nonce: nonce + 3 });
+    await this.deployDiamondInit(create2Salt, { gasPrice, nonce: nonce + 4 });
     nonce += 5;
 
     await this.deployDiamondProxy(create2Salt, { gasPrice, nonce });
@@ -392,7 +389,7 @@ export class Deployer {
   }
 
   public async deployValidatorTimelock(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const executionDelay = getNumberFromEnv("CONTRACTS_VALIDATOR_TIMELOCK_EXECUTION_DELAY");
     const validatorAddress = getAddressFromEnv("ETH_SENDER_SENDER_OPERATOR_COMMIT_ETH_ADDR");
     const contractAddress = await this.deployViaCreate2(
@@ -410,7 +407,7 @@ export class Deployer {
   }
 
   public async deployMulticall3(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
+    ethTxOptions.gasLimit ??= 100_000_000;
     const contractAddress = await this.deployViaCreate2("Multicall3", [], create2Salt, ethTxOptions);
 
     if (this.verbose) {

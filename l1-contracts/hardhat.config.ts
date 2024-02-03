@@ -63,6 +63,8 @@ const contractDefs = {
   linea: prodConfig,
   test: testConfig,
   localhost: localConfig,
+  arbitrumtest: prodConfig,
+  arbitrum: prodConfig,
 };
 
 export default {

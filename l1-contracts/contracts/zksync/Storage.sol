@@ -135,8 +135,9 @@ struct AppStorage {
     mapping(address secondaryChainGateway => SecondaryChain) secondaryChains;
     mapping(address secondaryChainGateway => mapping(uint256 secondaryChainPriorityOpId => SecondaryChainSyncStatus syncStatus)) secondaryChainSyncStatus;
     mapping(bytes32 canonicalTxHash => SecondaryChainOp secondaryChainOp) canonicalTxToSecondaryChainOp;
+    mapping(bytes32 secondaryChainCanonicalTxHash => bytes32 canonicalTxHash) secondaryToCanonicalTxHash;
     /// @dev Storage of variables needed for deprecated diamond cut facet
-    uint256[7] __DEPRECATED_diamondCutStorage;
+    uint256[6] __DEPRECATED_diamondCutStorage;
     /// @notice Address which will exercise critical changes to the Diamond Proxy (upgrades, freezing & unfreezing)
     address governor;
     /// @notice Address that the governor proposed as one that will replace it

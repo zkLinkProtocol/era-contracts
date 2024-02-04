@@ -23,6 +23,9 @@ interface IGetters is IBase {
     /// @return The secondary chain op info bind with tx
     function getSecondaryChainOp(bytes32 canonicalTxHash) external view returns (SecondaryChainOp memory);
 
+    /// @return Return the canonical tx hash bind with secondary chain tx
+    function getCanonicalTxHash(bytes32 secondaryChainCanonicalTxHash) external view returns (bytes32);
+
     /// @return The address of the verifier smart contract
     function getVerifier() external view returns (address);
 

@@ -43,6 +43,11 @@ contract GettersFacet is Base, IGetters, ILegacyGetters {
     }
 
     /// @inheritdoc IGetters
+    function getCanonicalTxHash(bytes32 secondaryChainCanonicalTxHash) external view returns (bytes32) {
+        return s.secondaryToCanonicalTxHash[secondaryChainCanonicalTxHash];
+    }
+
+    /// @inheritdoc IGetters
     function getVerifier() external view returns (address) {
         return address(s.verifier);
     }

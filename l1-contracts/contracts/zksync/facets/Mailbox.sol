@@ -343,6 +343,7 @@ contract MailboxFacet is Base, IMailbox {
 
         canonicalTxHash = _writePriorityOp(params, _request.l2CallData, _request.factoryDeps);
         s.canonicalTxToSecondaryChainOp[canonicalTxHash] = SecondaryChainOp(_request.gateway, _request.txId, secondaryChainCanonicalTxHash);
+        s.secondaryToCanonicalTxHash[secondaryChainCanonicalTxHash] = canonicalTxHash;
     }
 
     function _requestL2Transaction(

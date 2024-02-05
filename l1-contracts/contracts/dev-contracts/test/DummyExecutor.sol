@@ -86,6 +86,10 @@ contract DummyExecutor is IExecutor {
         );
     }
 
+    function isBatchesSynced(StoredBatchInfo[] calldata) external pure returns (bool) {
+        return true;
+    }
+
     function executeBatches(StoredBatchInfo[] calldata _batchesData) external {
         require(!shouldRevertOnExecuteBatches, "DummyExecutor: shouldRevertOnExecuteBatches");
         uint256 nBatches = _batchesData.length;

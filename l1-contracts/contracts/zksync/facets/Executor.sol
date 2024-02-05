@@ -292,8 +292,7 @@ contract ExecutorFacet is Base, IExecutor {
         s.l2LogsRootHashes[currentBatchNumber] = _storedBatch.l2LogsTreeRoot;
     }
 
-    /// @notice Check if all secondary ops were synced
-    /// @param _batchesData Data of the batches to be executed.
+    /// @inheritdoc IExecutor
     function isBatchesSynced(StoredBatchInfo[] calldata _batchesData) external view returns (bool) {
         uint256 nBatches = _batchesData.length;
         uint256 opIndex = 0;

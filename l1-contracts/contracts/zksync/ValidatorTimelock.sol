@@ -108,6 +108,11 @@ contract ValidatorTimelock is IExecutor, Ownable2Step {
         _propagateToZkSync();
     }
 
+    /// @dev Make a call to the zkSync contract with the same calldata.
+    function isBatchesSynced(StoredBatchInfo[] calldata _batchesData) external view returns (bool) {
+        return IExecutor(zkSyncContract).isBatchesSynced(_batchesData);
+    }
+
     /// @dev Check that batches were committed at least X time ago and
     /// make a call to the zkSync contract with the same calldata.
     function executeBatches(StoredBatchInfo[] calldata _newBatchesData) external onlyValidator {

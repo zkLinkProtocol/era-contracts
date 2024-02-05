@@ -136,8 +136,14 @@ struct AppStorage {
     mapping(address secondaryChainGateway => mapping(uint256 secondaryChainPriorityOpId => SecondaryChainSyncStatus syncStatus)) secondaryChainSyncStatus;
     mapping(bytes32 canonicalTxHash => SecondaryChainOp secondaryChainOp) canonicalTxToSecondaryChainOp;
     mapping(bytes32 secondaryChainCanonicalTxHash => bytes32 canonicalTxHash) secondaryToCanonicalTxHash;
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+         * variables without shifting down storage in the inheritance chain.
+         * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+         */
+    uint256[45] __gap;
     /// @dev Storage of variables needed for deprecated diamond cut facet
-    uint256[6] __DEPRECATED_diamondCutStorage;
+    uint256[7] __DEPRECATED_diamondCutStorage;
     /// @notice Address which will exercise critical changes to the Diamond Proxy (upgrades, freezing & unfreezing)
     address governor;
     /// @notice Address that the governor proposed as one that will replace it

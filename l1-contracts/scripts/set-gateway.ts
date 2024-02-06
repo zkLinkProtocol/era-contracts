@@ -2,14 +2,9 @@ import { Command } from "commander";
 import { ethers, Wallet } from "ethers";
 import { Deployer } from "../src.ts/deploy";
 import { formatUnits, parseUnits } from "ethers/lib/utils";
-import { web3Provider } from "./utils";
-
-import * as fs from "fs";
-import * as path from "path";
+import { getAddressFromEnv, web3Provider } from "./utils";
 
 const provider = web3Provider();
-const testConfigPath = path.join(process.env.ZKSYNC_HOME as string, "etc/test_config/constant");
-const ethTestConfig = JSON.parse(fs.readFileSync(`${testConfigPath}/eth.json`, { encoding: "utf-8" }));
 
 async function main() {
   const program = new Command();
@@ -20,7 +15,7 @@ async function main() {
     .option("--gateway <gateway>")
     .option("--gas-price <gas-price>")
     .action(async (cmd) => {
-      const deployWallet = new Wallet(process.env.GOVERNOR_PRIVATE_KEY, provider);
+      const deployWallet = new Wallet(getAddressFromEnv("GOVERNOR_PRIVATE_KEY"), provider);
       console.log(`Using deployer wallet: ${deployWallet.address}`);
 
       const gasPrice = cmd.gasPrice ? parseUnits(cmd.gasPrice, "gwei") : await provider.getGasPrice();

@@ -64,6 +64,7 @@
     "token-info": "ts-node scripts/token-info.ts",
     "deploy-testkit": "ts-node scripts/deploy-testkit.ts",
     "verify": "hardhat run --network env scripts/verify.ts",
+    "verify-governance": "hardhat run --network env scripts/verify-governance.ts",
     "deploy-testnet-erc20": "ts-node scripts/deploy-testnet-token.ts",
     "read-variable": "ts-node scripts/read-variable.ts",
     "initialize-bridges": "ts-node scripts/initialize-bridges.ts",

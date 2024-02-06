@@ -24,17 +24,30 @@ async function main() {
   const promises = [];
 
   // Contracts without constructor parameters
-  for (const address of [
-    addresses.ZkSync.GettersFacet,
-    addresses.ZkSync.DiamondInit,
-    addresses.ZkSync.AdminFacet,
-    addresses.ZkSync.MailboxFacet,
-    addresses.ZkSync.ExecutorFacet,
-    addresses.ZkSync.Verifier,
-  ]) {
-    const promise = verifyPromise(address);
-    promises.push(promise);
-  }
+  // verify Getter contract
+  console.log(`Verifying GettersFacet contract: ${addresses.ZkSync.GettersFacet}`);
+  let message = await verifyPromise(addresses.ZkSync.GettersFacet);
+  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  // verify DiamondInit contract
+  console.log(`Verifying DiamondInit contract: ${addresses.ZkSync.DiamondInit}`);
+  message = await verifyPromise(addresses.ZkSync.DiamondInit);
+  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  // verify AdminFacet contract
+  console.log(`Verifying AdminFacet contract: ${addresses.ZkSync.AdminFacet}`);
+  message = await verifyPromise(addresses.ZkSync.AdminFacet);
+  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  // verify MailboxFacet contract
+  console.log(`Verifying MailboxFacet contract: ${addresses.ZkSync.MailboxFacet}`);
+  message = await verifyPromise(addresses.ZkSync.MailboxFacet);
+  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  // verify ExecutorFacet contract
+  console.log(`Verifying ExecutorFacet contract: ${addresses.ZkSync.ExecutorFacet}`);
+  message = await verifyPromise(addresses.ZkSync.ExecutorFacet);
+  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  // verify Verifier contract
+  console.log(`Verifying Verifier contract: ${addresses.ZkSync.Verifier}`);
+  message = await verifyPromise(addresses.ZkSync.Verifier);
+  console.log(message.status == "fulfilled" ? message.value : message.reason);
 
   // TODO: Restore after switching to hardhat tasks (SMA-1711).
   // promises.push(verifyPromise(addresses.AllowList, [governor]));
@@ -54,13 +67,10 @@ async function main() {
   // }
 
   // Bridges
-  const promise = verifyPromise(addresses.Bridges.ERC20BridgeImplementation, [addresses.ZkSync.DiamondProxy]);
-  promises.push(promise);
-
-  const messages = await Promise.allSettled(promises);
-  for (const message of messages) {
-    console.log(message.status == "fulfilled" ? message.value : message.reason);
-  }
+  // verify ERC20BridgeImplementation contract
+  console.log(`Verifying ERC20BridgeImplementation contract: ${addresses.Bridges.ERC20BridgeImplementation}`);
+  message = await verifyPromise(addresses.Bridges.ERC20BridgeImplementation, [addresses.ZkSync.DiamondProxy]);
+  console.log(message.status == "fulfilled" ? message.value : message.reason);
 }
 
 main()

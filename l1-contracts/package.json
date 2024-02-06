@@ -78,7 +78,8 @@
     "upgrade-4": "ts-node scripts/upgrades/upgrade-4.ts",
     "upgrade-5": "ts-node scripts/upgrades/upgrade-5.ts",
     "upgrade-6": "ts-node scripts/upgrades/upgrade-6.ts",
-    "upgrade-system": "ts-node upgrade-system/index.ts"
+    "upgrade-system": "ts-node upgrade-system/index.ts",
+    "set-gateway": "ts-node scripts/set-gateway.ts"
   },
   "dependencies": {
     "dotenv": "^16.0.3"

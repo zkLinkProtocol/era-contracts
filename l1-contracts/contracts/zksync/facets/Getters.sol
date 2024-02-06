@@ -9,6 +9,7 @@ import {PriorityQueue, PriorityOperation} from "../libraries/PriorityQueue.sol";
 import {UncheckedMath} from "../../common/libraries/UncheckedMath.sol";
 import {IGetters} from "../interfaces/IGetters.sol";
 import {ILegacyGetters} from "../interfaces/ILegacyGetters.sol";
+import {IL2Gateway} from "../interfaces/IL2Gateway.sol";
 
 // While formally the following import is not used, it is needed to inherit documentation from it
 import {IBase} from "../interfaces/IBase.sol";
@@ -26,6 +27,11 @@ contract GettersFacet is Base, IGetters, ILegacyGetters {
     /*//////////////////////////////////////////////////////////////
                             CUSTOM GETTERS
     //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IGetters
+    function getGateway() external view returns (IL2Gateway) {
+        return s.gateway;
+    }
 
     /// @inheritdoc IGetters
     function getSecondaryChain(address gateway) external view returns (SecondaryChain memory) {

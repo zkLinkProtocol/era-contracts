@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {PriorityOperation} from "../libraries/PriorityQueue.sol";
 import {VerifierParams, UpgradeState, SecondaryChain, SecondaryChainSyncStatus, SecondaryChainOp} from "../Storage.sol";
 import "./IBase.sol";
+import {IL2Gateway} from "./IL2Gateway.sol";
 
 /// @title The interface of the Getters Contract that implements functions for getting contract state from outside the blockchain.
 /// @author Matter Labs
@@ -13,6 +14,9 @@ interface IGetters is IBase {
     /*//////////////////////////////////////////////////////////////
                             CUSTOM GETTERS
     //////////////////////////////////////////////////////////////*/
+
+    /// @return The gateway on local chain
+    function getGateway() external view returns (IL2Gateway);
 
     /// @return The secondary chain status
     function getSecondaryChain(address gateway) external view returns (SecondaryChain memory);

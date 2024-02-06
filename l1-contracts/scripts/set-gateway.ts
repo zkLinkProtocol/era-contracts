@@ -17,23 +17,16 @@ async function main() {
   program.version("0.1.0").name("set-gateway");
 
   program
-    .option("--private-key <private-key>")
-    .option("--owner-address <owner-address>")
-    .option("--gas-price <gas-price>")
     .option("--gateway <gateway>")
+    .option("--gas-price <gas-price>")
     .action(async (cmd) => {
-      const deployWallet = cmd.privateKey
-        ? new Wallet(cmd.privateKey, provider)
-        : Wallet.fromMnemonic(
-            process.env.MNEMONIC ? process.env.MNEMONIC : ethTestConfig.mnemonic,
-            "m/44'/60'/0'/0/1"
-          ).connect(provider);
+      const deployWallet = new Wallet(process.env.GOVERNOR_PRIVATE_KEY, provider);
       console.log(`Using deployer wallet: ${deployWallet.address}`);
 
       const gasPrice = cmd.gasPrice ? parseUnits(cmd.gasPrice, "gwei") : await provider.getGasPrice();
       console.log(`Using gas price: ${formatUnits(gasPrice, "gwei")} gwei`);
 
-      const ownerAddress = cmd.ownerAddress ? cmd.ownerAddress : deployWallet.address;
+      const ownerAddress = deployWallet.address;
       const gatewayAddress = cmd.gateway;
 
       const deployer = new Deployer({

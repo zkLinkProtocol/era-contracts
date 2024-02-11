@@ -206,7 +206,9 @@ interface IMailbox is IBase {
     /// @notice Request execution of L2 transaction from secondary chain.
     /// @param _request L2 request
     /// @return canonicalTxHash The hash of the requested L2 transaction. This hash can be used to follow the transaction status
-    function forwardRequestL2Transaction(ForwardL2Request calldata _request) external payable returns (bytes32 canonicalTxHash);
+    function forwardRequestL2Transaction(
+        ForwardL2Request calldata _request
+    ) external payable returns (bytes32 canonicalTxHash);
 
     /// @notice Estimates the cost in Ether of requesting execution of an L2 transaction from L1
     /// @param _gasPrice expected L1 gas price at which the user requests the transaction execution
@@ -224,7 +226,12 @@ interface IMailbox is IBase {
     /// @param _newTotalSyncedPriorityTxs New sync point
     /// @param _syncHash New sync hash
     /// @param _forwardEthAmount The difference eth amount between two sync points
-    function syncL2Requests(address _secondaryChainGateway, uint256 _newTotalSyncedPriorityTxs, bytes32 _syncHash, uint256 _forwardEthAmount) external payable;
+    function syncL2Requests(
+        address _secondaryChainGateway,
+        uint256 _newTotalSyncedPriorityTxs,
+        bytes32 _syncHash,
+        uint256 _forwardEthAmount
+    ) external payable;
 
     /// @notice Send batch root to secondary chain
     /// @param _secondaryChainGateway The secondary chain
@@ -259,7 +266,12 @@ interface IMailbox is IBase {
     /// @param totalSyncedPriorityTxs New sync point
     /// @param syncHash New sync hash
     /// @param forwardEthAmount The difference eth amount between two sync points
-    event SyncL2Requests(address secondaryChainGateway, uint256 totalSyncedPriorityTxs, bytes32 syncHash, uint256 forwardEthAmount);
+    event SyncL2Requests(
+        address secondaryChainGateway,
+        uint256 totalSyncedPriorityTxs,
+        bytes32 syncHash,
+        uint256 forwardEthAmount
+    );
 
     /// @notice Emitted when send batch root to secondary chain.
     /// @param secondaryChainGateway The secondary chain gateway

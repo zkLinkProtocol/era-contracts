@@ -39,7 +39,10 @@ contract GettersFacet is Base, IGetters, ILegacyGetters {
     }
 
     /// @inheritdoc IGetters
-    function getSecondaryChainSyncStatus(address gateway, uint256 priorityOpId) external view returns (SecondaryChainSyncStatus memory) {
+    function getSecondaryChainSyncStatus(
+        address gateway,
+        uint256 priorityOpId
+    ) external view returns (SecondaryChainSyncStatus memory) {
         return s.secondaryChainSyncStatus[gateway][priorityOpId];
     }
 

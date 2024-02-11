@@ -22,7 +22,10 @@ interface IGetters is IBase {
     function getSecondaryChain(address gateway) external view returns (SecondaryChain memory);
 
     /// @return The secondary chain op sync status
-    function getSecondaryChainSyncStatus(address gateway, uint256 priorityOpId) external view returns (SecondaryChainSyncStatus memory);
+    function getSecondaryChainSyncStatus(
+        address gateway,
+        uint256 priorityOpId
+    ) external view returns (SecondaryChainSyncStatus memory);
 
     /// @return The secondary chain op info bind with tx
     function getSecondaryChainOp(bytes32 canonicalTxHash) external view returns (SecondaryChainOp memory);

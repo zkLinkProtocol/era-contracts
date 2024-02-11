@@ -143,22 +143,35 @@ contract MailboxFacet is Base, IMailbox {
     }
 
     /// @inheritdoc IMailbox
-    function syncL2Requests(address _secondaryChainGateway, uint256 _newTotalSyncedPriorityTxs, bytes32 _syncHash, uint256 _forwardEthAmount) external payable onlyGateway {
+    function syncL2Requests(
+        address _secondaryChainGateway,
+        uint256 _newTotalSyncedPriorityTxs,
+        bytes32 _syncHash,
+        uint256 _forwardEthAmount
+    ) external payable onlyGateway {
         // Secondary chain should be registered
         SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
         require(secondaryChain.valid, "ssc");
 
         // Check newTotalSyncedPriorityTxs
-        require(_newTotalSyncedPriorityTxs <= secondaryChain.totalPriorityTxs && _newTotalSyncedPriorityTxs > secondaryChain.totalSyncedPriorityTxs, "spt");
+        require(
+            _newTotalSyncedPriorityTxs <= secondaryChain.totalPriorityTxs &&
+                _newTotalSyncedPriorityTxs > secondaryChain.totalSyncedPriorityTxs,
+            "spt"
+        );
 
         // Check sync hash at new point
-        SecondaryChainSyncStatus memory syncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][_newTotalSyncedPriorityTxs - 1];
+        SecondaryChainSyncStatus memory syncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][
+            _newTotalSyncedPriorityTxs - 1
+        ];
         require(syncStatus.hash == _syncHash, "ssh");
 
         // Check forward eth amount
         SecondaryChainSyncStatus memory lastSyncStatus;
         if (secondaryChain.totalSyncedPriorityTxs > 0) {
-            lastSyncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][secondaryChain.totalSyncedPriorityTxs - 1];
+            lastSyncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][
+                secondaryChain.totalSyncedPriorityTxs - 1
+            ];
         }
         require(syncStatus.amount - lastSyncStatus.amount == _forwardEthAmount, "sfm");
         require(msg.value == _forwardEthAmount, "smv");
@@ -286,7 +299,9 @@ contract MailboxFacet is Base, IMailbox {
     }
 
     /// @inheritdoc IMailbox
-    function forwardRequestL2Transaction(ForwardL2Request calldata _request) external payable nonReentrant onlyValidator returns (bytes32 canonicalTxHash) {
+    function forwardRequestL2Transaction(
+        ForwardL2Request calldata _request
+    ) external payable nonReentrant onlyValidator returns (bytes32 canonicalTxHash) {
         bytes32 secondaryChainCanonicalTxHash = keccak256(abi.encode(_request));
         {
             SecondaryChain memory secondaryChain = s.secondaryChains[_request.gateway];
@@ -342,7 +357,11 @@ contract MailboxFacet is Base, IMailbox {
         params.refundRecipient = _request.refundRecipient;
 
         canonicalTxHash = _writePriorityOp(params, _request.l2CallData, _request.factoryDeps);
-        s.canonicalTxToSecondaryChainOp[canonicalTxHash] = SecondaryChainOp(_request.gateway, _request.txId, secondaryChainCanonicalTxHash);
+        s.canonicalTxToSecondaryChainOp[canonicalTxHash] = SecondaryChainOp(
+            _request.gateway,
+            _request.txId,
+            secondaryChainCanonicalTxHash
+        );
         s.secondaryToCanonicalTxHash[secondaryChainCanonicalTxHash] = canonicalTxHash;
     }
 

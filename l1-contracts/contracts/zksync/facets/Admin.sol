@@ -20,14 +20,14 @@ contract AdminFacet is Base, IAdmin {
     string public constant override getName = "AdminFacet";
 
     /// @inheritdoc IAdmin
-    function setGateway(IL2Gateway _gateway) external onlyGovernor{
+    function setGateway(IL2Gateway _gateway) external onlyGovernor {
         require(address(s.gateway) == address(0), "g9");
         s.gateway = _gateway;
         emit InitGateway(_gateway);
     }
 
     /// @inheritdoc IAdmin
-    function setSecondaryChainGateway(address _gateway, bool _active) external onlyGateway{
+    function setSecondaryChainGateway(address _gateway, bool _active) external onlyGateway {
         s.secondaryChains[_gateway].valid = _active;
         emit SecondaryChainStatusUpdate(_gateway, _active);
     }

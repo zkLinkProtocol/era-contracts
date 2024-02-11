@@ -68,6 +68,7 @@
     "deploy-testnet-erc20": "ts-node scripts/deploy-testnet-token.ts",
     "read-variable": "ts-node scripts/read-variable.ts",
     "initialize-bridges": "ts-node scripts/initialize-bridges.ts",
+    "initialize-secondary-chain-bridges": "ts-node scripts/initialize-secondary-chain-bridges.ts",
     "initialize-validator": "ts-node scripts/initialize-validator.ts",
     "initialize-governance": "ts-node scripts/initialize-governance.ts",
     "migrate-governance": "ts-node scripts/migrate-governance.ts",

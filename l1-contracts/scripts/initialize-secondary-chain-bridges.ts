@@ -1,7 +1,6 @@
 import { Command } from "commander";
 import { ethers, Wallet } from "ethers";
 import { formatUnits, parseUnits } from "ethers/lib/utils";
-import { Deployer } from "../src.ts/deploy";
 import { applyL1ToL2Alias, computeL2Create2Address, getNumberFromEnv, hashL2Bytecode, SYSTEM_CONFIG } from "./utils";
 
 import * as fs from "fs";
@@ -33,9 +32,12 @@ const L2_ERC20_BRIDGE_PROXY_BYTECODE = readBytecode(
   openzeppelinTransparentProxyArtifactsPath,
   "TransparentUpgradeableProxy"
 );
+const L2_ERC20_BRIDGE_PROXY_BYTECODE_HASH = ethers.utils.sha256(L2_ERC20_BRIDGE_PROXY_BYTECODE);
 const L2_ERC20_BRIDGE_IMPLEMENTATION_BYTECODE = readBytecode(l2BridgeArtifactsPath, "L2ERC20Bridge");
+const L2_ERC20_BRIDGE_IMPLEMENTATION_BYTECODE_HASH = ethers.utils.sha256(L2_ERC20_BRIDGE_IMPLEMENTATION_BYTECODE);
 const L2_STANDARD_ERC20_IMPLEMENTATION_BYTECODE = readBytecode(l2BridgeArtifactsPath, "L2StandardERC20");
 const L2_STANDARD_ERC20_PROXY_BYTECODE = readBytecode(openzeppelinBeaconProxyArtifactsPath, "BeaconProxy");
+const L2_STANDARD_ERC20_PROXY_BYTECODE_HASH = ethers.utils.sha256(L2_STANDARD_ERC20_PROXY_BYTECODE);
 const L2_STANDARD_ERC20_PROXY_FACTORY_BYTECODE = readBytecode(
   openzeppelinBeaconProxyArtifactsPath,
   "UpgradeableBeacon"
@@ -49,13 +51,14 @@ async function main() {
   program.version("0.1.0").name("initialize-secondary-chain-bridges");
 
   program
+    .requiredOption("--erc20-bridge-artifacts-path <l1-bridge-artifacts-path>")
+    .requiredOption("--zklink-artifacts-path <zklink-artifacts-path>")
+    .requiredOption("--erc20-bridge <erc20-bridge>")
+    .requiredOption("--zklink <zklink>")
     .requiredOption("--web3-url <web3-url>")
     .option("--private-key <private-key>")
     .option("--gas-price <gas-price>")
     .option("--nonce <nonce>")
-    .requiredOption("--erc20-bridge <erc20-bridge>")
-    .requiredOption("--zksync <zksync>")
-    .requiredOption("--primary-gas-price <primary-gas-price>")
     .action(async (cmd) => {
       const web3Url = cmd.web3Url;
       const provider = new ethers.providers.JsonRpcProvider(web3Url);
@@ -73,15 +76,13 @@ async function main() {
       const nonce = cmd.nonce ? parseInt(cmd.nonce) : await deployWallet.getTransactionCount();
       console.log(`Using nonce: ${nonce}`);
 
-      const deployer = new Deployer({
-        deployWallet,
-        verbose: true,
-      });
+      const ZKLINK_INTERFACE = readInterface(cmd.zklinkArtifactsPath, "ZkLink");
+      const L1_ERC20_BRIDGE_INTERFACE = readInterface(cmd.erc20BridgeArtifactsPath, "L1ERC20Bridge");
 
-      const zkSync = deployer.zkSyncContract(deployWallet).attach(cmd.zksync);
-      const erc20Bridge = deployer.defaultERC20Bridge(deployWallet).attach(cmd.erc20Bridge);
+      const zkLink = ethers.ContractFactory.getContract(cmd.zklink, ZKLINK_INTERFACE, deployWallet);
+      const erc20Bridge = ethers.ContractFactory.getContract(cmd.erc20Bridge, L1_ERC20_BRIDGE_INTERFACE, deployWallet);
 
-      const l1GovernorAddress = await zkSync.getGovernor();
+      const l1GovernorAddress = await zkLink.getGovernor();
       console.log(`L1 governor address: ${l1GovernorAddress}`);
       // Check whether governor is a smart contract on L1 to apply alias if needed.
       const l1GovernorCodeSize = ethers.utils.hexDataLength(await deployWallet.provider.getCode(l1GovernorAddress));
@@ -127,15 +128,21 @@ async function main() {
       );
 
       // There will be two deployments done during the initial initialization
-      console.log(`Using primary gas price: ${formatUnits(cmd.primaryGasPrice, "gwei")} gwei}`);
-      const requiredValueToInitializeBridge = await zkSync.l2TransactionBaseCost(
-        cmd.primaryGasPrice,
+      const primaryGasPrice = await zkLink.txGasPrice();
+      console.log(`Using primary gas price: ${formatUnits(primaryGasPrice, "gwei")} gwei`);
+      const requiredValueToInitializeBridge = await zkLink.l2TransactionBaseCost(
+        primaryGasPrice,
         DEPLOY_L2_BRIDGE_COUNTERPART_GAS_LIMIT,
         SYSTEM_CONFIG.requiredL2GasPricePerPubdata
       );
 
       const tx = await erc20Bridge.initialize(
         [L2_ERC20_BRIDGE_IMPLEMENTATION_BYTECODE, L2_ERC20_BRIDGE_PROXY_BYTECODE, L2_STANDARD_ERC20_PROXY_BYTECODE],
+        [
+          L2_ERC20_BRIDGE_IMPLEMENTATION_BYTECODE_HASH,
+          L2_ERC20_BRIDGE_PROXY_BYTECODE_HASH,
+          L2_STANDARD_ERC20_PROXY_BYTECODE_HASH,
+        ],
         l2TokenFactoryAddr,
         l2GovernorAddress,
         requiredValueToInitializeBridge,

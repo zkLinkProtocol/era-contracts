@@ -46,7 +46,7 @@ const DEPLOY_L2_BRIDGE_COUNTERPART_GAS_LIMIT = getNumberFromEnv("CONTRACTS_DEPLO
 async function main() {
   const program = new Command();
 
-  program.version("0.1.0").name("initialize-bridges");
+  program.version("0.1.0").name("initialize-secondary-chain-bridges");
 
   program
     .requiredOption("--web3-url <web3-url>")
@@ -55,6 +55,7 @@ async function main() {
     .option("--nonce <nonce>")
     .requiredOption("--erc20-bridge <erc20-bridge>")
     .requiredOption("--zksync <zksync>")
+    .requiredOption("--primary-gas-price <primary-gas-price>")
     .action(async (cmd) => {
       const web3Url = cmd.web3Url;
       const provider = new ethers.providers.JsonRpcProvider(web3Url);
@@ -78,12 +79,14 @@ async function main() {
       });
 
       const zkSync = deployer.zkSyncContract(deployWallet).attach(cmd.zksync);
-      const erc20Bridge = cmd.erc20Bridgedeployer.defaultERC20Bridge(deployWallet).attach(cmd.erc20Bridge);
+      const erc20Bridge = deployer.defaultERC20Bridge(deployWallet).attach(cmd.erc20Bridge);
 
       const l1GovernorAddress = await zkSync.getGovernor();
+      console.log(`L1 governor address: ${l1GovernorAddress}`);
       // Check whether governor is a smart contract on L1 to apply alias if needed.
       const l1GovernorCodeSize = ethers.utils.hexDataLength(await deployWallet.provider.getCode(l1GovernorAddress));
       const l2GovernorAddress = l1GovernorCodeSize == 0 ? l1GovernorAddress : applyL1ToL2Alias(l1GovernorAddress);
+      console.log(`L2 governor address: ${l2GovernorAddress}`);
       const abiCoder = new ethers.utils.AbiCoder();
 
       const l2ERC20BridgeImplAddr = computeL2Create2Address(
@@ -124,9 +127,9 @@ async function main() {
       );
 
       // There will be two deployments done during the initial initialization
-      const primaryChainTxGasPrice = await zkSync.txGasPrice();
+      console.log(`Using primary gas price: ${formatUnits(cmd.primaryGasPrice, "gwei")} gwei}`);
       const requiredValueToInitializeBridge = await zkSync.l2TransactionBaseCost(
-        primaryChainTxGasPrice,
+        cmd.primaryGasPrice,
         DEPLOY_L2_BRIDGE_COUNTERPART_GAS_LIMIT,
         SYSTEM_CONFIG.requiredL2GasPricePerPubdata
       );

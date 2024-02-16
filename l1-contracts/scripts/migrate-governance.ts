@@ -24,7 +24,7 @@ const L2ERC20BridgeABI = JSON.parse(
 
 interface TxInfo {
   data: string;
-  to: string;
+  target: string;
   value?: string;
 }
 
@@ -102,7 +102,7 @@ async function main() {
       const erc20MigrationTx = l1Erc20Bridge.interface.encodeFunctionData("changeAdmin", [governanceAddressFromEnv]);
       displayTx("L1 ERC20 bridge migration calldata:", {
         data: erc20MigrationTx,
-        to: l1Erc20Bridge.address,
+        target: l1Erc20Bridge.address,
       });
 
       const zkSyncSetPendingGovernor = zkSync.interface.encodeFunctionData("setPendingGovernor", [
@@ -110,7 +110,7 @@ async function main() {
       ]);
       displayTx("zkSync Diamond Proxy migration calldata:", {
         data: zkSyncSetPendingGovernor,
-        to: zkSync.address,
+        target: zkSync.address,
       });
 
       const validatorTimelockMigration = validatorTimelock.interface.encodeFunctionData("transferOwnership", [
@@ -118,7 +118,7 @@ async function main() {
       ]);
       displayTx("Validator timelock migration calldata:", {
         data: validatorTimelockMigration,
-        to: validatorTimelock.address,
+        target: validatorTimelock.address,
       });
 
       // Below, we prepare the transactions to migrate the L2 contracts.
@@ -213,13 +213,13 @@ async function main() {
       ]);
       displayTx("Schedule transparent calldata:\n", {
         data: scheduleTransparentCalldata,
-        to: governance.address,
+        target: governance.address,
       });
 
       const executeCalldata = governance.interface.encodeFunctionData("execute", [operation]);
       displayTx("Execute calldata:\n", {
         data: executeCalldata,
-        to: governance.address,
+        target: governance.address,
       });
     });
 

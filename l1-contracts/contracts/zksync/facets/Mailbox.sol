@@ -354,7 +354,14 @@ contract MailboxFacet is Base, IMailbox {
             params.valueToMint = baseCost + _request.l2Value;
         }
         params.l2GasPricePerPubdata = _request.l2GasPricePerPubdata;
-        params.refundRecipient = _request.refundRecipient;
+        {
+            // If the `_refundRecipient` is a smart contract, we apply the L1 to L2 alias to prevent foot guns.
+            address refundRecipient = _request.refundRecipient;
+            if (refundRecipient.code.length > 0) {
+                refundRecipient = AddressAliasHelper.applyL1ToL2Alias(refundRecipient);
+            }
+            params.refundRecipient = refundRecipient;
+        }
 
         canonicalTxHash = _writePriorityOp(params, _request.l2CallData, _request.factoryDeps);
         s.canonicalTxToSecondaryChainOp[canonicalTxHash] = SecondaryChainOp(

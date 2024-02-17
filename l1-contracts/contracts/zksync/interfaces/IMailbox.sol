@@ -236,7 +236,8 @@ interface IMailbox is IBase {
     /// @notice Send batch root to secondary chain
     /// @param _secondaryChainGateway The secondary chain
     /// @param _batchNumber The batch number
-    function syncBatchRoot(address _secondaryChainGateway, uint256 _batchNumber) external payable;
+    /// @param _forwardEthAmount The eth forward to secondary chain
+    function syncBatchRoot(address _secondaryChainGateway, uint256 _batchNumber, uint256 _forwardEthAmount) external payable;
 
     /// @notice Send l2 tx hash to secondary chain
     /// @param _l2TxHash The l2 tx hash
@@ -276,7 +277,8 @@ interface IMailbox is IBase {
     /// @notice Emitted when send batch root to secondary chain.
     /// @param secondaryChainGateway The secondary chain gateway
     /// @param batchNumber The batch number
-    event SyncBatchRoot(address secondaryChainGateway, uint256 batchNumber);
+    /// @param forwardEthAmount The eth forward to secondary chain
+    event SyncBatchRoot(address secondaryChainGateway, uint256 batchNumber, uint256 forwardEthAmount);
 
     /// @notice Emitted when send l2 tx hash to secondary chain.
     /// @param l2TxHash The l2 tx hash

@@ -183,21 +183,25 @@ contract MailboxFacet is Base, IMailbox {
     }
 
     /// @inheritdoc IMailbox
-    function syncBatchRoot(address _secondaryChainGateway, uint256 _batchNumber) external payable {
+    function syncBatchRoot(address _secondaryChainGateway, uint256 _batchNumber, uint256 _forwardEthAmount) external payable nonReentrant onlyValidator {
         // Secondary chain should be registered
         SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
         require(secondaryChain.valid, "bsc");
 
         // The batch should be executed
+        require(_batchNumber <= s.totalBatchesExecuted, "bsl");
         bytes32 l2LogsRootHash = s.l2LogsRootHashes[_batchNumber];
-        require(l2LogsRootHash != bytes32(0), "bsl");
+
+        // Check the forward eth amount
+        require(_forwardEthAmount <= secondaryChain.totalPendingWithdraw, "bwn");
+        s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw = secondaryChain.totalPendingWithdraw - _forwardEthAmount;
 
         // Send batch root to secondary chain by gateway
-        bytes memory finalCallData = abi.encodeCall(IZkLink.syncBatchRoot, (_batchNumber, l2LogsRootHash));
+        bytes memory finalCallData = abi.encodeCall(IZkLink.syncBatchRoot, (_batchNumber, l2LogsRootHash, _forwardEthAmount));
         bytes memory callData = abi.encode(_secondaryChainGateway, finalCallData);
         // Forward fee to gateway
-        s.gateway.sendMessage{value: msg.value}(0, callData);
-        emit SyncBatchRoot(_secondaryChainGateway, _batchNumber);
+        s.gateway.sendMessage{value: msg.value + _forwardEthAmount}(_forwardEthAmount, callData);
+        emit SyncBatchRoot(_secondaryChainGateway, _batchNumber, _forwardEthAmount);
     }
 
     /// @inheritdoc IMailbox
@@ -256,7 +260,11 @@ contract MailboxFacet is Base, IMailbox {
         require(proofValid, "pi"); // Failed to verify that withdrawal was actually initialized on L2
 
         s.isEthWithdrawalFinalized[_l2BatchNumber][_l2MessageIndex] = true;
-        _withdrawFunds(_l1WithdrawReceiver, _amount);
+        if (s.secondaryChains[_l1WithdrawReceiver].valid) {
+            s.secondaryChains[_l1WithdrawReceiver].totalPendingWithdraw = s.secondaryChains[_l1WithdrawReceiver].totalPendingWithdraw + _amount;
+        } else {
+            _withdrawFunds(_l1WithdrawReceiver, _amount);
+        }
 
         emit EthWithdrawalFinalized(_l1WithdrawReceiver, _amount);
     }

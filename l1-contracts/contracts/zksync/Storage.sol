@@ -100,10 +100,12 @@ struct FeeParams {
 /// @param valid Validator can forward l2 request of valid secondary chain
 /// @param totalPriorityTxs The total txs forwarded
 /// @param totalSyncedPriorityTxs The total txs synced
+/// @param totalPendingWithdraw The total eth waiting to forward to secondary chain
 struct SecondaryChain {
     bool valid;
     uint256 totalPriorityTxs;
     uint256 totalSyncedPriorityTxs;
+    uint256 totalPendingWithdraw;
 }
 
 /// @dev The sync status for priority op of secondary chain

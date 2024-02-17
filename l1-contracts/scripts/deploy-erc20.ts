@@ -30,7 +30,7 @@ async function deployToken(token: TokenDescription, wallet: Wallet): Promise<Tok
   const tokenFactory = await hardhat.ethers.getContractFactory(token.implementation, wallet);
   const args = token.implementation !== "WETH9" ? [token.name, token.symbol, token.decimals] : [];
   // arbitrum usually requires a bigger gas limit
-  const erc20 = await tokenFactory.deploy(...args, { gasLimit: 50000000 });
+  const erc20 = await tokenFactory.deploy(...args, { gasLimit: 30000000 });
   await erc20.deployTransaction.wait();
 
   if (token.implementation !== "WETH9") {

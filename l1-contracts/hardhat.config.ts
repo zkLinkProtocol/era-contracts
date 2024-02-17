@@ -9,6 +9,7 @@ import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/ta
 import { task } from "hardhat/config";
 import "solidity-coverage";
 import { getNumberFromEnv } from "./scripts/utils";
+import "hardhat-diamond-abi";
 
 // If no network is specified, use the default config
 if (!process.env.CHAIN_ETH_NETWORK) {
@@ -117,6 +118,25 @@ export default {
   },
   gasReporter: {
     enabled: true,
+  },
+  diamondAbi: {
+    // (required) The name of your Diamond ABI.
+    name: "ZkSyncDiamond",
+    // (optional) An array of strings, matched against fully qualified contract names, to
+    // determine which contracts are included in your Diamond ABI.
+    include: ["IAdmin","IExecutor","IGetters","IMailbox"],
+    // (optional) An array of strings, matched against fully qualified contract names, to
+    // determine which contracts are excluded from your Diamond ABI.
+    exclude: [],
+    // (optional) A function that is called with the ABI element, index, entire ABI,
+    // and fully qualified contract name for each item in the combined ABIs.
+    // If the function returns `false`, the function is not included in your Diamond ABI.
+    filter: function (abiElement, index, fullAbi, fullyQualifiedName) {
+      return abiElement.name !== "getName";
+    },
+    // (optional) Whether exact duplicate sighashes should cause an error to be thrown,
+    // defaults to true.
+    strict: true,
   },
 };
 

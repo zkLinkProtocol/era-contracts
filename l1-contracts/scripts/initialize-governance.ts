@@ -69,8 +69,8 @@ async function main() {
         salt: ethers.constants.HashZero,
       };
 
-      await (await governance.scheduleTransparent(operation, 0)).wait();
-      await (await governance.execute(operation)).wait();
+      await (await governance.scheduleTransparent(operation, 0, { gasLimit: 30000000 })).wait();
+      await (await governance.execute(operation, { gasLimit: 30000000 })).wait();
     });
 
   await program.parseAsync(process.argv);

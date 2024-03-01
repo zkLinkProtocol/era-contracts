@@ -36,6 +36,7 @@
     "clean": "hardhat clean",
     "test": "hardhat test",
     "verify": "hardhat run src/verify.ts",
+    "verify-bridge": "ts-node src/verify-l2-erc20-bridge.ts",
     "deploy-testnet-paymaster": "ts-node src/deployTestnetPaymaster.ts",
     "deploy-force-deploy-upgrader": "ts-node src/deployForceDeployUpgrader.ts",
     "publish-bridge-preimages": "ts-node src/publish-bridge-preimages.ts",

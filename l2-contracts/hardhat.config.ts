@@ -22,13 +22,27 @@ export default {
   solidity: {
     version: "0.8.20",
   },
-  defaultNetwork: "localhost",
+  defaultNetwork: process.env.CHAIN_ETH_NETWORK,
   networks: {
     localhost: {
       // era-test-node default url
       url: "http://127.0.0.1:8011",
       ethNetwork: null,
       zksync: true,
+    },
+    lineatest: {
+      url: "https://goerli.rpc.zklink.io",
+      ethNetwork: "goerli",
+      zksync: true,
+      // contract verification endpoint
+      verifyURL: "https://goerli.explorer.zklink.io/contract_verification",
+    },
+    linea: {
+      url: "https://rpc.zklink.io",
+      ethNetwork: "mainnet",
+      zksync: true,
+      // contract verification endpoint
+      verifyURL: "https://explorer.zklink.io/contract_verification",
     },
     zkSyncTestnet: {
       url: "https://zksync2-testnet.zksync.dev",

@@ -1,4 +1,5 @@
 import * as hardhat from "hardhat";
+import { Command } from "commander";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function verifyPromise(address: string, constructorArguments?: Array<any>, libraries?: object): Promise<any> {
@@ -17,31 +18,28 @@ function verifyPromise(address: string, constructorArguments?: Array<any>, libra
 }
 
 async function main() {
-  if (process.env.CHAIN_ETH_NETWORK == "localhost") {
-    console.log("Skip contract verification on localhost");
-    return;
-  }
+  const program = new Command();
 
-  const promises = [];
+  program.version("0.1.0").name("verify").description("verify L2 contracts");
 
-  // Contracts without constructor parameters
-  for (const address of [
-    process.env.CONTRACTS_L2_WETH_TOKEN_IMPL_ADDR,
-    process.env.CONTRACTS_L2_ERC20_BRIDGE_IMPL_ADDR,
-  ]) {
-    const promise = verifyPromise(address);
+  program.requiredOption("--impl-address <impl-address>").action(async (cmd) => {
+    const promises = [];
+
+    // Contracts without constructor parameters
+    const promise = verifyPromise(cmd.implAddress);
     promises.push(promise);
-  }
 
-  const messages = await Promise.allSettled(promises);
-  for (const message of messages) {
-    console.log(message.status == "fulfilled" ? message.value : message.reason);
-  }
+    const messages = await Promise.allSettled(promises);
+    for (const message of messages) {
+      console.log(message.status == "fulfilled" ? message.value : message.reason);
+    }
+  });
+  await program.parseAsync(process.argv);
 }
 
 main()
   .then(() => process.exit(0))
   .catch((err) => {
-    console.error("Error:", err.message || err);
+    console.error("Error:", err);
     process.exit(1);
   });

@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { ethers, Wallet } from "ethers";
 import { Deployer } from "../src.ts/deploy";
 import { formatUnits, parseUnits } from "ethers/lib/utils";
-import { getAddressFromEnv, web3Provider } from "./utils";
+import { getHashFromEnv, web3Provider } from "./utils";
 
 const provider = web3Provider();
 
@@ -15,7 +15,7 @@ async function main() {
     .option("--gateway <gateway>")
     .option("--gas-price <gas-price>")
     .action(async (cmd) => {
-      const deployWallet = new Wallet(getAddressFromEnv("GOVERNOR_PRIVATE_KEY"), provider);
+      const deployWallet = new Wallet(getHashFromEnv("GOVERNOR_PRIVATE_KEY"), provider);
       console.log(`Using deployer wallet: ${deployWallet.address}`);
 
       const gasPrice = cmd.gasPrice ? parseUnits(cmd.gasPrice, "gwei") : await provider.getGasPrice();

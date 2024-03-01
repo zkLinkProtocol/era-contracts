@@ -29,8 +29,7 @@ async function main() {
   const governanceAddress = process.env.CONTRACTS_GOVERNANCE_ADDR;
 
   console.log(`Verifying governance contract: ${governanceAddress}`);
-  const message = await verifyPromise(governanceAddress, [deployWallet.address, ethers.constants.AddressZero, 0]);
-  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  await verifyPromise(governanceAddress, [deployWallet.address, ethers.constants.AddressZero, 0]);
 }
 
 main()

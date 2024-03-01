@@ -1,5 +1,7 @@
 import * as hardhat from "hardhat";
-import { deployedAddressesFromEnv } from "../scripts/utils";
+import { deployedAddressesFromEnv, web3Provider } from "../scripts/utils";
+import { Deployer } from "../src.ts/deploy";
+import { Wallet } from "ethers";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function verifyPromise(address: string, constructorArguments?: Array<any>, libraries?: object): Promise<any> {
@@ -21,56 +23,68 @@ async function main() {
     return;
   }
   const addresses = deployedAddressesFromEnv();
-  const promises = [];
 
   // Contracts without constructor parameters
   // verify Getter contract
   console.log(`Verifying GettersFacet contract: ${addresses.ZkSync.GettersFacet}`);
-  let message = await verifyPromise(addresses.ZkSync.GettersFacet);
-  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  await verifyPromise(addresses.ZkSync.GettersFacet);
   // verify DiamondInit contract
   console.log(`Verifying DiamondInit contract: ${addresses.ZkSync.DiamondInit}`);
-  message = await verifyPromise(addresses.ZkSync.DiamondInit);
-  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  await verifyPromise(addresses.ZkSync.DiamondInit);
   // verify AdminFacet contract
   console.log(`Verifying AdminFacet contract: ${addresses.ZkSync.AdminFacet}`);
-  message = await verifyPromise(addresses.ZkSync.AdminFacet);
-  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  await verifyPromise(addresses.ZkSync.AdminFacet);
   // verify MailboxFacet contract
   console.log(`Verifying MailboxFacet contract: ${addresses.ZkSync.MailboxFacet}`);
-  message = await verifyPromise(addresses.ZkSync.MailboxFacet);
-  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  await verifyPromise(addresses.ZkSync.MailboxFacet);
   // verify ExecutorFacet contract
   console.log(`Verifying ExecutorFacet contract: ${addresses.ZkSync.ExecutorFacet}`);
-  message = await verifyPromise(addresses.ZkSync.ExecutorFacet);
-  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  await verifyPromise(addresses.ZkSync.ExecutorFacet);
   // verify Verifier contract
   console.log(`Verifying Verifier contract: ${addresses.ZkSync.Verifier}`);
-  message = await verifyPromise(addresses.ZkSync.Verifier);
-  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  await verifyPromise(addresses.ZkSync.Verifier);
 
-  // TODO: Restore after switching to hardhat tasks (SMA-1711).
-  // promises.push(verifyPromise(addresses.AllowList, [governor]));
+  // Proxy
+  const provider = web3Provider();
+  const wallet = new Wallet(process.env.GOVERNOR_PRIVATE_KEY, provider);
+  // Create dummy deployer to get constructor parameters for diamond proxy
+  const deployer = new Deployer({
+    deployWallet: wallet,
+  });
 
-  // // Proxy
-  // {
-  //     // Create dummy deployer to get constructor parameters for diamond proxy
-  //     const deployer = new Deployer({
-  //         deployWallet: ethers.Wallet.createRandom(),
-  //         governorAddress: governor
-  //     });
-
-  //     const chainId = process.env.ETH_CLIENT_CHAIN_ID;
-  //     const constructorArguments = [chainId, await deployer.initialProxyDiamondCut()];
-  //     const promise = verifyPromise(addresses.ZkSync.DiamondProxy, constructorArguments);
-  //     promises.push(promise);
-  // }
+  const chainId = process.env.ETH_CLIENT_CHAIN_ID;
+  const constructorArguments = [chainId, await deployer.initialProxyDiamondCut()];
+  console.log(`Verifying DiamondProxy contract: ${addresses.ZkSync.DiamondProxy}`);
+  await verifyPromise(addresses.ZkSync.DiamondProxy, constructorArguments);
 
   // Bridges
   // verify ERC20BridgeImplementation contract
   console.log(`Verifying ERC20BridgeImplementation contract: ${addresses.Bridges.ERC20BridgeImplementation}`);
-  message = await verifyPromise(addresses.Bridges.ERC20BridgeImplementation, [addresses.ZkSync.DiamondProxy]);
-  console.log(message.status == "fulfilled" ? message.value : message.reason);
+  await verifyPromise(addresses.Bridges.ERC20BridgeImplementation, [addresses.ZkSync.DiamondProxy]);
+  // verify ERC20BridgeProxy contract
+  console.log(`Verifying ERC20BridgeProxy contract: ${addresses.Bridges.ERC20BridgeProxy}`);
+  await verifyPromise(addresses.Bridges.ERC20BridgeProxy, [
+    addresses.Bridges.ERC20BridgeImplementation,
+    process.env.GOVERNOR_ADDRESS,
+    "0x",
+  ]);
+  // verify wETHBridgeImplementation contract
+  console.log(`Verifying wETHBridgeImplementation contract: ${addresses.Bridges.WethBridgeImplementation}`);
+  await verifyPromise(addresses.Bridges.WethBridgeImplementation, [
+    process.env.CONTRACTS_L1_WETH_TOKEN_ADDR,
+    addresses.ZkSync.DiamondProxy,
+  ]);
+  // verify wETHBridgeProxy contract
+  console.log(`Verifying wETHBridgeProxy contract: ${addresses.Bridges.WethBridgeProxy}`);
+  await verifyPromise(addresses.Bridges.WethBridgeProxy, [
+    addresses.Bridges.WethBridgeImplementation,
+    process.env.GOVERNOR_ADDRESS,
+    "0x",
+  ]);
+  // wETH
+  // verify wETH token
+  console.log(`Verifying wETH token: ${process.env.CONTRACTS_L1_WETH_TOKEN_ADDR}`);
+  await verifyPromise(process.env.CONTRACTS_L1_WETH_TOKEN_ADDR);
 }
 
 main()

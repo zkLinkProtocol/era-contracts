@@ -59,12 +59,12 @@ const contractDefs = {
   rinkeby: testnetConfig,
   ropsten: testnetConfig,
   goerli: testnetConfig,
+  lineatest: testnetConfig,
+  arbitrumtest: testnetConfig,
   mainnet: prodConfig,
   test: testConfig,
   localhost: localConfig,
-  lineatest: prodConfig,
   linea: prodConfig,
-  arbitrumtest: prodConfig,
   arbitrum: prodConfig,
 };
 

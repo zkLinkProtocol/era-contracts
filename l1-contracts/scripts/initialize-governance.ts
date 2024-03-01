@@ -52,10 +52,10 @@ async function main() {
         deployWallet
       );
 
-      await (await erc20Bridge.changeAdmin(governance.address)).wait();
-      await (await wethBridge.changeAdmin(governance.address)).wait();
+      await (await erc20Bridge.changeAdmin(governance.address, { gasPrice: gasPrice })).wait();
+      await (await wethBridge.changeAdmin(governance.address, { gasPrice: gasPrice })).wait();
 
-      await (await zkSync.setPendingGovernor(governance.address)).wait();
+      await (await zkSync.setPendingGovernor(governance.address, { gasPrice: gasPrice })).wait();
 
       const call = {
         target: zkSync.address,
@@ -69,8 +69,8 @@ async function main() {
         salt: ethers.constants.HashZero,
       };
 
-      await (await governance.scheduleTransparent(operation, 0, { gasLimit: 30000000 })).wait();
-      await (await governance.execute(operation, { gasLimit: 30000000 })).wait();
+      await (await governance.scheduleTransparent(operation, 0, { gasPrice: gasPrice, gasLimit: 30000000 })).wait();
+      await (await governance.execute(operation, { gasPrice: gasPrice, gasLimit: 30000000 })).wait();
     });
 
   await program.parseAsync(process.argv);

@@ -332,14 +332,6 @@ contract MailboxFacet is Base, IMailbox {
 
         // Here we manually assign fields for the struct to prevent "stack too deep" error
         WritePriorityOpParams memory params;
-
-        // Prevent contract address conflicts
-        {
-            if (_request.isContractCall) {
-                address originAddress = AddressAliasHelper.undoL1ToL2Alias(_request.sender);
-                require(!Address.isContract(originAddress), "fcc");
-            }
-        }
         params.sender = _request.sender;
         params.txId = s.priorityQueue.getTotalPriorityTxs();
         params.l2Value = _request.l2Value;

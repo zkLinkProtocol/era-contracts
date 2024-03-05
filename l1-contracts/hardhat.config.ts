@@ -124,7 +124,7 @@ export default {
     name: "ZkSyncDiamond",
     // (optional) An array of strings, matched against fully qualified contract names, to
     // determine which contracts are included in your Diamond ABI.
-    include: ["IAdmin","IExecutor","IGetters","IMailbox"],
+    include: ["IAdmin", "IExecutor", "IGetters", "IMailbox"],
     // (optional) An array of strings, matched against fully qualified contract names, to
     // determine which contracts are excluded from your Diamond ABI.
     exclude: [],

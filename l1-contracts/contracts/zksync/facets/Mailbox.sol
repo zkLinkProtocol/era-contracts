@@ -32,6 +32,10 @@ contract MailboxFacet is Base, IMailbox {
     /// @inheritdoc IBase
     string public constant override getName = "MailboxFacet";
 
+    // keccak256("ForwardL2Request(address gateway,bool isContractCall,address sender,uint256 txId,address contractAddressL2,uint256 l2Value,bytes32 l2CallDataHash,uint256 l2GasLimit,uint256 l2GasPricePerPubdata,bytes32 factoryDepsHash,address refundRecipient)")
+    bytes32 public constant FORWARD_REQUEST_TYPE_HASH =
+        0xe0aaca1722ef50bb0c9b032e5b16ce2b79fa9f23638835456b27fd6894f8292c;
+
     /// @inheritdoc IMailbox
     function proveL2MessageInclusion(
         uint256 _batchNumber,
@@ -321,7 +325,7 @@ contract MailboxFacet is Base, IMailbox {
     function forwardRequestL2Transaction(
         ForwardL2Request calldata _request
     ) external payable nonReentrant onlyValidator returns (bytes32 canonicalTxHash) {
-        bytes32 secondaryChainCanonicalTxHash = keccak256(abi.encode(_request));
+        bytes32 secondaryChainCanonicalTxHash = hashForwardL2Request(_request);
         {
             SecondaryChain memory secondaryChain = s.secondaryChains[_request.gateway];
             require(secondaryChain.valid, "fsc");
@@ -529,5 +533,25 @@ contract MailboxFacet is Base, IMailbox {
 
         (l1Receiver, offset) = UnsafeBytes.readAddress(_message, offset);
         (amount, offset) = UnsafeBytes.readUint256(_message, offset);
+    }
+
+    function hashForwardL2Request(ForwardL2Request memory _request) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    FORWARD_REQUEST_TYPE_HASH,
+                    _request.gateway,
+                    _request.isContractCall,
+                    _request.sender,
+                    _request.txId,
+                    _request.contractAddressL2,
+                    _request.l2Value,
+                    keccak256(_request.l2CallData),
+                    _request.l2GasLimit,
+                    _request.l2GasPricePerPubdata,
+                    keccak256(abi.encode(_request.factoryDeps)),
+                    _request.refundRecipient
+                )
+            );
     }
 }

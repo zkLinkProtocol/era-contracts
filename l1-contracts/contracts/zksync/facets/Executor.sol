@@ -123,8 +123,6 @@ contract ExecutorFacet is Base, IExecutor {
         // See SystemLogKey enum in Constants.sol for ordering.
         uint256 processedLogs;
 
-        bytes32 providedL2ToL1PubdataHash = keccak256(_newBatch.totalL2ToL1Pubdata);
-
         // linear traversal of the logs
         for (uint256 i = 0; i < emittedL2Logs.length; i = i.uncheckedAdd(L2_TO_L1_LOG_SERIALIZE_SIZE)) {
             // Extract the values to be compared to/used such as the log sender, key, and value
@@ -142,7 +140,7 @@ contract ExecutorFacet is Base, IExecutor {
                 l2LogsTreeRoot = logValue;
             } else if (logKey == uint256(SystemLogKey.TOTAL_L2_TO_L1_PUBDATA_KEY)) {
                 require(logSender == L2_TO_L1_MESSENGER_SYSTEM_CONTRACT_ADDR, "ln");
-                require(providedL2ToL1PubdataHash == logValue, "wp");
+                require(_newBatch.providedL2ToL1PubdataHash == logValue, "wp");
             } else if (logKey == uint256(SystemLogKey.STATE_DIFF_HASH_KEY)) {
                 require(logSender == L2_TO_L1_MESSENGER_SYSTEM_CONTRACT_ADDR, "lb");
                 stateDiffHash = logValue;

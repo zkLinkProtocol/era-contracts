@@ -59,7 +59,7 @@ interface IExecutor is IBase {
     /// @param bootloaderHeapInitialContentsHash Hash of the initial contents of the bootloader heap. In practice it serves as the commitment to the transactions in the batch.
     /// @param eventsQueueStateHash Hash of the events queue state. In practice it serves as the commitment to the events in the batch.
     /// @param systemLogs concatenation of all L2 -> L1 system logs in the batch
-    /// @param totalL2ToL1Pubdata Total pubdata committed to as part of bootloader run. Contents are: l2Tol1Logs <> l2Tol1Messages <> publishedBytecodes <> stateDiffs
+    /// @param providedL2ToL1PubdataHash The keccak256 hash of total pubdata committed to as part of bootloader run. Contents are: l2Tol1Logs <> l2Tol1Messages <> publishedBytecodes <> stateDiffs
     struct CommitBatchInfo {
         uint64 batchNumber;
         uint64 timestamp;
@@ -70,7 +70,7 @@ interface IExecutor is IBase {
         bytes32 bootloaderHeapInitialContentsHash;
         bytes32 eventsQueueStateHash;
         bytes systemLogs;
-        bytes totalL2ToL1Pubdata;
+        bytes32 providedL2ToL1PubdataHash;
     }
 
     /// @notice Recursive proof input data (individual commitments are constructed onchain)

@@ -45,8 +45,8 @@ async function main() {
         salt: ethers.constants.HashZero,
       };
 
-      await (await governance.scheduleTransparent(operation, 0)).wait();
-      await (await governance.execute(operation)).wait();
+      await (await governance.scheduleTransparent(operation, 0, { gasPrice: gasPrice })).wait();
+      await (await governance.execute(operation, { gasPrice: gasPrice })).wait();
     });
 
   await program.parseAsync(process.argv);

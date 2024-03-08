@@ -23,6 +23,7 @@ async function main() {
     .option("--create2-salt <create2-salt>")
     .option("--diamond-upgrade-init <version>")
     .option("--only-verifier")
+    .option("--only-validator")
     .action(async (cmd) => {
       const deployWallet = cmd.privateKey
         ? new Wallet(cmd.privateKey, provider)
@@ -60,6 +61,11 @@ async function main() {
 
       if (cmd.onlyVerifier) {
         await deployer.deployVerifier(create2Salt, { gasPrice, nonce });
+        return;
+      }
+
+      if (cmd.onlyValidator) {
+        await deployer.deployValidatorTimelock(create2Salt, { gasPrice });
         return;
       }
 

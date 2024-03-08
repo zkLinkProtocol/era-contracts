@@ -1,5 +1,5 @@
 import * as hardhat from "hardhat";
-import { deployedAddressesFromEnv, web3Provider } from "../scripts/utils";
+import { deployedAddressesFromEnv, getAddressFromEnv, getNumberFromEnv, web3Provider } from "../scripts/utils";
 import { Deployer } from "../src.ts/deploy";
 import { Wallet } from "ethers";
 
@@ -85,6 +85,15 @@ async function main() {
   // verify wETH token
   console.log(`Verifying wETH token: ${process.env.CONTRACTS_L1_WETH_TOKEN_ADDR}`);
   await verifyPromise(process.env.CONTRACTS_L1_WETH_TOKEN_ADDR);
+
+  // validator timelock
+  console.log(`Verifying ValidatorTimeLock contract: ${addresses.ValidatorTimeLock}`);
+  await verifyPromise(addresses.ValidatorTimeLock, [
+    getAddressFromEnv("GOVERNOR_ADDRESS"),
+    addresses.ZkSync.DiamondProxy,
+    getNumberFromEnv("CONTRACTS_VALIDATOR_TIMELOCK_EXECUTION_DELAY"),
+    getAddressFromEnv("ETH_SENDER_SENDER_OPERATOR_COMMIT_ETH_ADDR"),
+  ]);
 }
 
 main()

@@ -2,7 +2,6 @@
 pragma solidity 0.8.20;
 
 interface IMergeTokenPortal {
-
     /// @notice Source token info
     /// @param isSupported Is the source token supported
     /// @param isLocked Is the source token locked

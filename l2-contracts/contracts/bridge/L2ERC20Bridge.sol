@@ -26,7 +26,7 @@ contract L2ERC20Bridge is IL2Bridge, Initializable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @dev The address of the merge token manager contract.
-    address public immutable MERGE_TOKEN_PORTAL;
+    IMergeTokenPortal public immutable MERGE_TOKEN_PORTAL;
 
     /// @dev The address of the L1 bridge counterpart.
     address public override l1Bridge;
@@ -43,7 +43,7 @@ contract L2ERC20Bridge is IL2Bridge, Initializable {
 
     /// @dev Contract is expected to be used as proxy implementation.
     /// @dev Disable the initialization to prevent Parity hack.
-    constructor(address _mergeTokenPortal) {
+    constructor(IMergeTokenPortal _mergeTokenPortal) {
         _disableInitializers();
 
         MERGE_TOKEN_PORTAL = _mergeTokenPortal;
@@ -79,20 +79,7 @@ contract L2ERC20Bridge is IL2Bridge, Initializable {
         uint256 _amount,
         bytes calldata _data
     ) external payable override {
-        // Only the L1 bridge counterpart can initiate and finalize the deposit.
-        require(AddressAliasHelper.undoL1ToL2Alias(msg.sender) == l1Bridge, "mq");
-        // The passed value should be 0 for ERC20 bridge.
-        require(msg.value == 0, "Value should be 0 for ERC20 bridge");
-
-        address expectedL2Token = l2TokenAddress(_l1Token);
-        address currentL1Token = l1TokenAddress[expectedL2Token];
-        if (currentL1Token == address(0)) {
-            address deployedToken = _deployL2Token(_l1Token, _data);
-            require(deployedToken == expectedL2Token, "mt");
-            l1TokenAddress[expectedL2Token] = _l1Token;
-        } else {
-            require(currentL1Token == _l1Token, "gg"); // Double check that the expected value equal to real one
-        }
+        address expectedL2Token = _getExpectedL2Token(_l1Token, _data);
 
         IL2StandardToken(expectedL2Token).bridgeMint(_l2Receiver, _amount);
 
@@ -112,6 +99,16 @@ contract L2ERC20Bridge is IL2Bridge, Initializable {
         uint256 _amount,
         bytes calldata _data
     ) external payable {
+        address expectedL2Token = _getExpectedL2Token(_l1Token, _data);
+
+        IL2StandardToken(expectedL2Token).bridgeMint(address(this), _amount);
+        IERC20Upgradeable(expectedL2Token).safeApprove(address(MERGE_TOKEN_PORTAL), _amount);
+        MERGE_TOKEN_PORTAL.deposit(expectedL2Token, _amount, _l2Receiver);
+
+        emit FinalizeDeposit(_l1Sender, _l2Receiver, expectedL2Token, _amount);
+    }
+
+    function _getExpectedL2Token(address _l1Token, bytes calldata _data) internal returns (address) {
         // Only the L1 bridge counterpart can initiate and finalize the deposit.
         require(AddressAliasHelper.undoL1ToL2Alias(msg.sender) == l1Bridge, "mq");
         // The passed value should be 0 for ERC20 bridge.
@@ -127,11 +124,7 @@ contract L2ERC20Bridge is IL2Bridge, Initializable {
             require(currentL1Token == _l1Token, "gg"); // Double check that the expected value equal to real one
         }
 
-        IL2StandardToken(expectedL2Token).bridgeMint(address(this), _amount);
-        IERC20Upgradeable(expectedL2Token).safeApprove(MERGE_TOKEN_PORTAL, _amount);
-        IMergeTokenPortal(MERGE_TOKEN_PORTAL).deposit(expectedL2Token, _amount, _l2Receiver);
-
-        emit FinalizeDeposit(_l1Sender, _l2Receiver, expectedL2Token, _amount);
+        return expectedL2Token;
     }
 
     /// @dev Deploy and initialize the L2 token for the L1 counterpart
@@ -152,13 +145,7 @@ contract L2ERC20Bridge is IL2Bridge, Initializable {
     function withdraw(address _l1Receiver, address _l2Token, uint256 _amount) external override {
         IL2StandardToken(_l2Token).bridgeBurn(msg.sender, _amount);
 
-        address l1Token = l1TokenAddress[_l2Token];
-        require(l1Token != address(0), "yh");
-
-        bytes memory message = _getL1WithdrawMessage(_l1Receiver, l1Token, _amount);
-        L2ContractHelper.sendMessageToL1(message);
-
-        emit WithdrawalInitiated(msg.sender, _l1Receiver, _l2Token, _amount);
+        _sendWithdrawalMessage(_l1Receiver, _l2Token, _amount);
     }
 
     /// @notice Initiates a withdrawal by burning merge funds on the contract and sending the message to L1
@@ -167,10 +154,17 @@ contract L2ERC20Bridge is IL2Bridge, Initializable {
     /// @param _l2Token The L2 token address which is withdrawn
     /// @param _amount The total amount of tokens to be withdrawn
     function withdrawFromMerge(address _l1Receiver, address _l2Token, uint256 _amount) external {
-        IERC20Upgradeable(_l2Token).safeTransferFrom(msg.sender, address(this), _amount);
-        IMergeTokenPortal(MERGE_TOKEN_PORTAL).withdraw(_l2Token, _amount, msg.sender);
-        IL2StandardToken(_l2Token).bridgeBurn(msg.sender, _amount);
+        IMergeTokenPortal.SourceTokenInfo memory sourceTokenInfo = MERGE_TOKEN_PORTAL.getSourceTokenInfos(_l2Token);
+        address mergeToken = sourceTokenInfo.mergeToken;
 
+        IERC20Upgradeable(mergeToken).safeTransferFrom(msg.sender, address(this), _amount);
+        MERGE_TOKEN_PORTAL.withdraw(_l2Token, _amount, address(this));
+        IL2StandardToken(_l2Token).bridgeBurn(address(this), _amount);
+
+        _sendWithdrawalMessage(_l1Receiver, _l2Token, _amount);
+    }
+
+    function _sendWithdrawalMessage(address _l1Receiver, address _l2Token, uint256 _amount) internal {
         address l1Token = l1TokenAddress[_l2Token];
         require(l1Token != address(0), "yh");
 

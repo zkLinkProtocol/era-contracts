@@ -1,9 +1,31 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 /// @author Matter Labs
-interface IL2Bridge {
+interface IL2BridgeFromMerge {
+    event FinalizeDeposit(
+        address indexed l1Sender,
+        address indexed l2Receiver,
+        address indexed l2Token,
+        uint256 amount
+    );
+
+    event FinalizeDepositToMerge(
+        address indexed l1Sender,
+        address indexed l2Receiver,
+        address indexed l2Token,
+        address mergeToken,
+        uint256 amount
+    );
+
+    event WithdrawalInitiated(
+        address indexed l2Sender,
+        address indexed l1Receiver,
+        address indexed l2Token,
+        uint256 amount
+    );
+
     function finalizeDeposit(
         address _l1Sender,
         address _l2Receiver,
@@ -21,6 +43,8 @@ interface IL2Bridge {
     ) external payable;
 
     function withdraw(address _l1Receiver, address _l2Token, uint256 _amount) external;
+
+    function withdrawFromMerge(address _l1Receiver, address _l2Token, uint256 _amount) external;
 
     function l1TokenAddress(address _l2Token) external view returns (address);
 

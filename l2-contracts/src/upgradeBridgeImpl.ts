@@ -56,8 +56,12 @@ function validateUpgradeInfo(info: UpgradeInfo) {
 }
 
 const priorityTxMaxGasLimit = BigNumber.from(getNumberFromEnv("CONTRACTS_PRIORITY_TX_MAX_GAS_LIMIT"));
+console.log("Priority tx max gas limit: ", priorityTxMaxGasLimit.toString());
+
+const governanceTimelockDelay = getNumberFromEnv("CONTRACTS_GOVERNANCE_TIMELOCK_EXECUTION_DELAY");
 const l2Erc20BridgeProxyAddress = getAddressFromEnv("CONTRACTS_L2_ERC20_BRIDGE_ADDR");
 const l1Erc20BridgeProxyAddress = getAddressFromEnv("CONTRACTS_L1_ERC20_BRIDGE_PROXY_ADDR");
+const mergeTokenPortalAddress = getAddressFromEnv("CONTRACTS_MERGE_TOKEN_PORTAL_ADDR");
 const EIP1967_IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
 const provider = web3Provider();
@@ -184,9 +188,9 @@ async function main() {
       const deployWallet = cmd.privateKey
         ? new Wallet(cmd.privateKey, provider)
         : Wallet.fromMnemonic(
-            process.env.MNEMONIC ? process.env.MNEMONIC : ethTestConfig.mnemonic,
-            "m/44'/60'/0'/0/1"
-          ).connect(provider);
+          process.env.MNEMONIC ? process.env.MNEMONIC : ethTestConfig.mnemonic,
+          "m/44'/60'/0'/0/1"
+        ).connect(provider);
       const deployer = new Deployer({ deployWallet });
       const gasPrice = cmd.gasPrice
         ? ethers.utils.parseUnits(cmd.gasPrice, "gwei")
@@ -199,7 +203,16 @@ async function main() {
       console.log("Salt: ", salt);
 
       const bridgeImplBytecode = getContractBytecode(cmd.contract);
-      const l2ERC20BridgeImplAddr = computeL2Create2Address(deployWallet, bridgeImplBytecode, "0x", salt);
+      const abiCoder = new ethers.utils.AbiCoder();
+      const constructorInput = ethers.utils.arrayify(
+        abiCoder.encode(
+          ["address"],
+          [mergeTokenPortalAddress]
+        )
+      );
+      console.log("Constructor input: ", constructorInput);
+
+      const l2ERC20BridgeImplAddr = computeL2Create2Address(deployWallet, bridgeImplBytecode, constructorInput, salt);
       console.log("Bridge implemenation address: ", l2ERC20BridgeImplAddr);
 
       if (cmd.l2DoubleCheck !== false) {
@@ -221,7 +234,7 @@ async function main() {
       const tx = await create2DeployFromL1(
         deployWallet,
         bridgeImplBytecode,
-        "0x",
+        constructorInput,
         salt,
         priorityTxMaxGasLimit,
         gasPrice
@@ -269,9 +282,9 @@ async function main() {
       const deployWallet = cmd.deployerPrivateKey
         ? new Wallet(cmd.deployerPrivateKey, provider)
         : Wallet.fromMnemonic(
-            process.env.MNEMONIC ? process.env.MNEMONIC : ethTestConfig.mnemonic,
-            "m/44'/60'/0'/0/1"
-          ).connect(provider);
+          process.env.MNEMONIC ? process.env.MNEMONIC : ethTestConfig.mnemonic,
+          "m/44'/60'/0'/0/1"
+        ).connect(provider);
       const deployer = new Deployer({ deployWallet });
       const refundRecipient = cmd.refundRecipient ? cmd.refundRecipient : deployWallet.address;
       console.log("Gas price: ", ethers.utils.formatUnits(gasPrice, "gwei"));
@@ -314,7 +327,7 @@ async function main() {
       const governance = deployer.governanceContract(deployWallet);
       const scheduleTransparentCalldata = governance.interface.encodeFunctionData("scheduleTransparent", [
         operation,
-        0,
+        governanceTimelockDelay,
       ]);
       const executeCalldata = governance.interface.encodeFunctionData("execute", [operation]);
 

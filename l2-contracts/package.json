@@ -42,7 +42,7 @@
     "publish-bridge-preimages": "ts-node src/publish-bridge-preimages.ts",
     "deploy-l2-weth": "ts-node src/deployL2Weth.ts",
     "upgrade-bridge-contracts": "ts-node src/upgradeBridgeImpl.ts",
-    "execute-governance-tx":"ts-node src/execute-governance-tx.ts"
+    "execute-governance-tx": "ts-node src/execute-governance-tx.ts"
   },
   "dependencies": {
     "dotenv": "^16.0.3"

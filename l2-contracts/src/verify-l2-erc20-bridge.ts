@@ -29,7 +29,7 @@ async function main() {
     const promises = [];
 
     // Contracts without constructor parameters
-    const constructorArguments = [mergeTokenPortalAddress]
+    const constructorArguments = [mergeTokenPortalAddress];
     const promise = verifyPromise(cmd.implAddress, constructorArguments);
     promises.push(promise);
 

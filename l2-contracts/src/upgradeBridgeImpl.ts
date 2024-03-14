@@ -188,9 +188,9 @@ async function main() {
       const deployWallet = cmd.privateKey
         ? new Wallet(cmd.privateKey, provider)
         : Wallet.fromMnemonic(
-          process.env.MNEMONIC ? process.env.MNEMONIC : ethTestConfig.mnemonic,
-          "m/44'/60'/0'/0/1"
-        ).connect(provider);
+            process.env.MNEMONIC ? process.env.MNEMONIC : ethTestConfig.mnemonic,
+            "m/44'/60'/0'/0/1"
+          ).connect(provider);
       const deployer = new Deployer({ deployWallet });
       const gasPrice = cmd.gasPrice
         ? ethers.utils.parseUnits(cmd.gasPrice, "gwei")
@@ -204,12 +204,7 @@ async function main() {
 
       const bridgeImplBytecode = getContractBytecode(cmd.contract);
       const abiCoder = new ethers.utils.AbiCoder();
-      const constructorInput = ethers.utils.arrayify(
-        abiCoder.encode(
-          ["address"],
-          [mergeTokenPortalAddress]
-        )
-      );
+      const constructorInput = ethers.utils.arrayify(abiCoder.encode(["address"], [mergeTokenPortalAddress]));
       console.log("Constructor input: ", constructorInput);
 
       const l2ERC20BridgeImplAddr = computeL2Create2Address(deployWallet, bridgeImplBytecode, constructorInput, salt);
@@ -282,9 +277,9 @@ async function main() {
       const deployWallet = cmd.deployerPrivateKey
         ? new Wallet(cmd.deployerPrivateKey, provider)
         : Wallet.fromMnemonic(
-          process.env.MNEMONIC ? process.env.MNEMONIC : ethTestConfig.mnemonic,
-          "m/44'/60'/0'/0/1"
-        ).connect(provider);
+            process.env.MNEMONIC ? process.env.MNEMONIC : ethTestConfig.mnemonic,
+            "m/44'/60'/0'/0/1"
+          ).connect(provider);
       const deployer = new Deployer({ deployWallet });
       const refundRecipient = cmd.refundRecipient ? cmd.refundRecipient : deployWallet.address;
       console.log("Gas price: ", ethers.utils.formatUnits(gasPrice, "gwei"));

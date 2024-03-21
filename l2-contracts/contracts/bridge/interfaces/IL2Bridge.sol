@@ -4,6 +4,8 @@ pragma solidity 0.8.20;
 
 /// @author Matter Labs
 interface IL2Bridge {
+    error FunctionNotSupported();
+
     event FinalizeDeposit(
         address indexed l1Sender,
         address indexed l2Receiver,

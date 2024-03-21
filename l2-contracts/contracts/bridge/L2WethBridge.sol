@@ -105,7 +105,7 @@ contract L2WethBridge is IL2Bridge, Initializable {
         uint256, // _amount,
         bytes calldata // _data
     ) external payable override {
-        require(false, "This function is not supported");
+        revert FunctionNotSupported();
     }
 
     /// @return l1Token Address of an L1 token counterpart.

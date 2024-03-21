@@ -202,7 +202,7 @@ contract L1WethBridge is IL1Bridge, ReentrancyGuard {
         uint256, // _l2TxGasPerPubdataByte,
         address // _refundRecipient
     ) external payable override returns (bytes32) {
-        require(false, "Method not supported. Use deposit instead");
+        revert FunctionNotSupported();
     }
 
     /// @dev Generate a calldata for calling the deposit finalization on the L2 WETH bridge contract

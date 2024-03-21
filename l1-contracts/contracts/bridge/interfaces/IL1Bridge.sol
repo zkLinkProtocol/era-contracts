@@ -6,6 +6,8 @@ pragma solidity 0.8.19;
 /// @author Matter Labs
 /// @custom:security-contact security@matterlabs.dev
 interface IL1Bridge {
+    error FunctionNotSupported();
+
     event DepositInitiated(
         bytes32 indexed l2DepositTxHash,
         address indexed from,

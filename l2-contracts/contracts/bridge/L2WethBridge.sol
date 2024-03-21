@@ -98,30 +98,14 @@ contract L2WethBridge is IL2Bridge, Initializable {
         emit FinalizeDeposit(_l1Sender, _l2Receiver, l2WethAddress, _amount);
     }
 
-    /// @notice Finalize the deposit of WETH from L1 to L2 by calling deposit on L2Weth contract
-    /// @param _l1Sender The account address that initiated the deposit on L1
-    /// @param _l2Receiver The account address that would receive the WETH on L2
-    /// @param _l1Token Address of the L1 WETH token
-    /// @param _amount Total amount of WETH to deposit
     function finalizeDepositToMerge(
-        address _l1Sender,
-        address _l2Receiver,
-        address _l1Token,
-        uint256 _amount,
+        address, // _l2Receiver,
+        address, // _l1Sender,
+        address, // _l1Token,
+        uint256, // _amount,
         bytes calldata // _data
     ) external payable override {
-        require(
-            AddressAliasHelper.undoL1ToL2Alias(msg.sender) == l1Bridge,
-            "Only L1 WETH bridge can call this function"
-        );
-
-        require(_l1Token == l1WethAddress, "Only WETH can be deposited");
-        require(msg.value == _amount, "Amount mismatch");
-
-        // Deposit WETH to L2 receiver.
-        IL2Weth(l2WethAddress).depositTo{value: msg.value}(_l2Receiver);
-
-        emit FinalizeDepositToMerge(_l1Sender, _l2Receiver, l2WethAddress, address(0), _amount);
+        require(false, "This function is not supported");
     }
 
     /// @return l1Token Address of an L1 token counterpart.

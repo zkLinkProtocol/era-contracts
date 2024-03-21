@@ -163,36 +163,6 @@ contract L1WethBridge is IL1Bridge, ReentrancyGuard {
         uint256 _l2TxGasPerPubdataByte,
         address _refundRecipient
     ) external payable nonReentrant returns (bytes32 txHash) {
-        _deposit(_l2Receiver, _l1Token, _amount, _l2TxGasLimit, _l2TxGasPerPubdataByte, _refundRecipient);
-        emit DepositInitiated(txHash, msg.sender, _l2Receiver, _l1Token, _amount);
-    }
-
-    /// @param _l2Receiver The account address that should receive WETH on L2
-    /// @param _l1Token The L1 token address which is deposited (needs to be WETH address)
-    /// @param _amount The total amount of tokens to be bridged
-    /// @param _l2TxGasLimit The L2 gas limit to be used in the corresponding L2 transaction
-    /// @param _l2TxGasPerPubdataByte The gasPerPubdataByteLimit to be used in the corresponding L2 transaction
-    /// @param _refundRecipient The address on L2 that will receive the refund for the transaction.
-    function depositToMerge(
-        address _l2Receiver,
-        address _l1Token,
-        uint256 _amount,
-        uint256 _l2TxGasLimit,
-        uint256 _l2TxGasPerPubdataByte,
-        address _refundRecipient
-    ) external payable returns (bytes32 txHash) {
-        _deposit(_l2Receiver, _l1Token, _amount, _l2TxGasLimit, _l2TxGasPerPubdataByte, _refundRecipient);
-        emit DepositToMergeInitiated(txHash, msg.sender, _l2Receiver, _l1Token, _amount, true);
-    }
-
-    function _deposit(
-        address _l2Receiver,
-        address _l1Token,
-        uint256 _amount,
-        uint256 _l2TxGasLimit,
-        uint256 _l2TxGasPerPubdataByte,
-        address _refundRecipient
-    ) internal returns (bytes32 txHash) {
         require(_l1Token == l1WethAddress, "Invalid L1 token address");
         require(_amount != 0, "Amount cannot be zero");
 
@@ -220,6 +190,19 @@ contract L1WethBridge is IL1Bridge, ReentrancyGuard {
             new bytes[](0),
             refundRecipient
         );
+
+        emit DepositInitiated(txHash, msg.sender, _l2Receiver, _l1Token, _amount);
+    }
+
+    function depositToMerge(
+        address, // _l2Receiver,
+        address, // _l1Token,
+        uint256, // _amount,
+        uint256, // _l2TxGasLimit,
+        uint256, // _l2TxGasPerPubdataByte,
+        address // _refundRecipient
+    ) external payable override returns (bytes32) {
+        require(false, "Method not supported. Use deposit instead");
     }
 
     /// @dev Generate a calldata for calling the deposit finalization on the L2 WETH bridge contract

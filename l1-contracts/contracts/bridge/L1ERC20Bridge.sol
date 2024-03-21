@@ -271,7 +271,11 @@ contract L1ERC20Bridge is IL1Bridge, IL1BridgeLegacy, ReentrancyGuard {
         // Save the deposited amount to claim funds on L1 if the deposit failed on L2
         depositAmount[msg.sender][_l1Token][l2TxHash] = amount;
 
-        emit DepositToMergeInitiated(l2TxHash, msg.sender, _l2Receiver, _l1Token, amount, _toMerge);
+        if (_toMerge) {
+            emit DepositToMergeInitiated(l2TxHash, msg.sender, _l2Receiver, _l1Token, amount, _toMerge);
+        } else {
+            emit DepositInitiated(l2TxHash, msg.sender, _l2Receiver, _l1Token, amount);
+        }
     }
 
     /// @dev Transfers tokens from the depositor address to the smart contract address

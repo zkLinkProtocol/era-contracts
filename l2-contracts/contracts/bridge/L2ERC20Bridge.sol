@@ -9,7 +9,7 @@ import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import {IL1Bridge} from "./interfaces/IL1Bridge.sol";
-import {IL2BridgeFromMerge} from "./interfaces/IL2BridgeFromMerge.sol";
+import {IL2Bridge} from "./interfaces/IL2Bridge.sol";
 import {IL2StandardToken} from "./interfaces/IL2StandardToken.sol";
 import {IMergeTokenPortal} from "./interfaces/IMergeTokenPortal.sol";
 
@@ -22,7 +22,7 @@ import {SystemContractsCaller} from "../SystemContractsCaller.sol";
 /// @custom:security-contact security@matterlabs.dev
 /// @notice The "default" bridge implementation for the ERC20 tokens. Note, that it does not
 /// support any custom token logic, i.e. rebase tokens' functionality is not supported.
-contract L2ERC20Bridge is IL2BridgeFromMerge, Initializable {
+contract L2ERC20Bridge is IL2Bridge, Initializable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @dev The address of the merge token manager contract.
@@ -103,20 +103,22 @@ contract L2ERC20Bridge is IL2BridgeFromMerge, Initializable {
         IMergeTokenPortal.SourceTokenInfo memory sourceTokenInfo = MERGE_TOKEN_PORTAL.getSourceTokenInfos(
             expectedL2Token
         );
-        uint256 afterBalance = sourceTokenInfo.balance + _amount;
 
         // Ensure that MergeToken can be deposit
-        if (sourceTokenInfo.isSupported && !sourceTokenInfo.isLocked && afterBalance <= sourceTokenInfo.depositLimit) {
-            IL2StandardToken(expectedL2Token).bridgeMint(address(this), _amount);
-            IERC20Upgradeable(expectedL2Token).safeApprove(address(MERGE_TOKEN_PORTAL), _amount);
-            MERGE_TOKEN_PORTAL.deposit(expectedL2Token, _amount, _l2Receiver);
-
+        try this.depositToMerge(expectedL2Token, _amount, _l2Receiver) {
             emit FinalizeDepositToMerge(_l1Sender, _l2Receiver, expectedL2Token, sourceTokenInfo.mergeToken, _amount);
-        } else {
+        } catch {
             IL2StandardToken(expectedL2Token).bridgeMint(_l2Receiver, _amount);
 
             emit FinalizeDeposit(_l1Sender, _l2Receiver, expectedL2Token, _amount);
         }
+    }
+
+    function depositToMerge(address _l2Token, uint256 _amount, address _l2Receiver) external {
+        require(msg.sender == address(this), "Only bridge can call this function");
+        IL2StandardToken(_l2Token).bridgeMint(address(this), _amount);
+        IERC20Upgradeable(_l2Token).safeApprove(address(MERGE_TOKEN_PORTAL), _amount);
+        MERGE_TOKEN_PORTAL.deposit(_l2Token, _amount, _l2Receiver);
     }
 
     function _getExpectedL2Token(address _l1Token, bytes calldata _data) internal returns (address) {

@@ -7,7 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IL1BridgeLegacy} from "./interfaces/IL1BridgeLegacy.sol";
-import {IL1BridgeToMerge} from "./interfaces/IL1BridgeToMerge.sol";
+import {IL1Bridge} from "./interfaces/IL1Bridge.sol";
 import {IL2Bridge} from "./interfaces/IL2Bridge.sol";
 import {IL2ERC20Bridge} from "./interfaces/IL2ERC20Bridge.sol";
 
@@ -26,7 +26,7 @@ import {AddressAliasHelper} from "../vendor/AddressAliasHelper.sol";
 /// @notice Smart contract that allows depositing ERC20 tokens from Ethereum to zkSync Era
 /// @dev It is standard implementation of ERC20 Bridge that can be used as a reference
 /// for any other custom token bridges.
-contract L1ERC20Bridge is IL1BridgeToMerge, IL1BridgeLegacy, ReentrancyGuard {
+contract L1ERC20Bridge is IL1Bridge, IL1BridgeLegacy, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @dev zkSync smart contract that is used to operate with L2 via asynchronous L2 <-> L1 communication
@@ -151,28 +151,6 @@ contract L1ERC20Bridge is IL1BridgeToMerge, IL1BridgeLegacy, ReentrancyGuard {
         l2TxHash = deposit(_l2Receiver, _l1Token, _amount, _l2TxGasLimit, _l2TxGasPerPubdataByte, address(0));
     }
 
-    /// @notice Legacy deposit to merge method with refunding the fee to the caller, use another `depositToMerge` method instead.
-    /// @dev Initiates a deposit by locking funds on the contract and sending the request
-    /// of processing an L2 transaction where merge tokens would be minted.
-    /// @dev If the token is bridged for the first time, the L2 token and merge token contract will be deployed. Note however, that the
-    /// newly-deployed token does not support any custom logic, i.e. rebase tokens' functionality is not supported.
-    /// @param _l2Receiver The account address that should receive funds on L2
-    /// @param _l1Token The L1 token address which is deposited
-    /// @param _amount The total amount of tokens to be bridged
-    /// @param _l2TxGasLimit The L2 gas limit to be used in the corresponding L2 transaction
-    /// @param _l2TxGasPerPubdataByte The gasPerPubdataByteLimit to be used in the corresponding L2 transaction
-    /// @return l2TxHash The L2 transaction hash of depositToMerge finalization
-    /// NOTE: the function doesn't use `nonreentrant` modifier, because the inner method does.
-    function depositToMerge(
-        address _l2Receiver,
-        address _l1Token,
-        uint256 _amount,
-        uint256 _l2TxGasLimit,
-        uint256 _l2TxGasPerPubdataByte
-    ) external payable returns (bytes32 l2TxHash) {
-        l2TxHash = depositToMerge(_l2Receiver, _l1Token, _amount, _l2TxGasLimit, _l2TxGasPerPubdataByte, address(0));
-    }
-
     /// @notice Initiates a deposit by locking funds on the contract and sending the request
     /// of processing an L2 transaction where tokens would be minted
     /// @dev If the token is bridged for the first time, the L2 token contract will be deployed. Note however, that the
@@ -247,7 +225,7 @@ contract L1ERC20Bridge is IL1BridgeToMerge, IL1BridgeLegacy, ReentrancyGuard {
         uint256 _l2TxGasLimit,
         uint256 _l2TxGasPerPubdataByte,
         address _refundRecipient
-    ) public payable nonReentrant returns (bytes32 l2TxHash) {
+    ) external payable nonReentrant returns (bytes32 l2TxHash) {
         l2TxHash = _deposit(
             _l2Receiver,
             _l1Token,

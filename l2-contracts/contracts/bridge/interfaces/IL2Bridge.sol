@@ -11,6 +11,14 @@ interface IL2Bridge {
         uint256 amount
     );
 
+    event FinalizeDepositToMerge(
+        address indexed l1Sender,
+        address indexed l2Receiver,
+        address indexed l2Token,
+        address mergeToken,
+        uint256 amount
+    );
+
     event WithdrawalInitiated(
         address indexed l2Sender,
         address indexed l1Receiver,
@@ -19,6 +27,14 @@ interface IL2Bridge {
     );
 
     function finalizeDeposit(
+        address _l1Sender,
+        address _l2Receiver,
+        address _l1Token,
+        uint256 _amount,
+        bytes calldata _data
+    ) external payable;
+
+    function finalizeDepositToMerge(
         address _l1Sender,
         address _l2Receiver,
         address _l1Token,

@@ -28,8 +28,10 @@ contract AdminFacet is Base, IAdmin {
 
     /// @inheritdoc IAdmin
     function setSecondaryChainGateway(address _gateway, bool _active) external onlyGateway {
-        s.secondaryChains[_gateway].valid = _active;
-        emit SecondaryChainStatusUpdate(_gateway, _active);
+        if (s.secondaryChains[_gateway].valid != _active) {
+            s.secondaryChains[_gateway].valid = _active;
+            emit SecondaryChainStatusUpdate(_gateway, _active);
+        }
     }
 
     /// @inheritdoc IAdmin

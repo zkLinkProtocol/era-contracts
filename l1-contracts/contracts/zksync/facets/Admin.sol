@@ -22,14 +22,17 @@ contract AdminFacet is Base, IAdmin {
     /// @inheritdoc IAdmin
     function setGateway(IL2Gateway _gateway) external onlyGovernor {
         require(address(s.gateway) == address(0), "g9");
+        require(address(_gateway) != address(0), "ga");
         s.gateway = _gateway;
         emit InitGateway(_gateway);
     }
 
     /// @inheritdoc IAdmin
     function setSecondaryChainGateway(address _gateway, bool _active) external onlyGateway {
-        s.secondaryChains[_gateway].valid = _active;
-        emit SecondaryChainStatusUpdate(_gateway, _active);
+        if (s.secondaryChains[_gateway].valid != _active) {
+            s.secondaryChains[_gateway].valid = _active;
+            emit SecondaryChainStatusUpdate(_gateway, _active);
+        }
     }
 
     /// @inheritdoc IAdmin

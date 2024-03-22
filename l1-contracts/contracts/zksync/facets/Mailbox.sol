@@ -32,9 +32,11 @@ contract MailboxFacet is Base, IMailbox {
     /// @inheritdoc IBase
     string public constant override getName = "MailboxFacet";
 
-    // keccak256("ForwardL2Request(address gateway,bool isContractCall,address sender,uint256 txId,address contractAddressL2,uint256 l2Value,bytes32 l2CallDataHash,uint256 l2GasLimit,uint256 l2GasPricePerPubdata,bytes32 factoryDepsHash,address refundRecipient)")
+    /// @dev The forward request type hash
     bytes32 public constant FORWARD_REQUEST_TYPE_HASH =
-        0xe0aaca1722ef50bb0c9b032e5b16ce2b79fa9f23638835456b27fd6894f8292c;
+        keccak256(
+            "ForwardL2Request(address gateway,bool isContractCall,address sender,uint256 txId,address contractAddressL2,uint256 l2Value,bytes32 l2CallDataHash,uint256 l2GasLimit,uint256 l2GasPricePerPubdata,bytes32 factoryDepsHash,address refundRecipient)"
+        );
 
     /// @inheritdoc IMailbox
     function proveL2MessageInclusion(
@@ -181,8 +183,7 @@ contract MailboxFacet is Base, IMailbox {
         require(msg.value == _forwardEthAmount, "smv");
 
         // Update totalSyncedPriorityTxs
-        secondaryChain.totalSyncedPriorityTxs = _newTotalSyncedPriorityTxs;
-        s.secondaryChains[_secondaryChainGateway] = secondaryChain;
+        s.secondaryChains[_secondaryChainGateway].totalSyncedPriorityTxs = _newTotalSyncedPriorityTxs;
         emit SyncL2Requests(_secondaryChainGateway, _newTotalSyncedPriorityTxs, _syncHash, _forwardEthAmount);
     }
 
@@ -274,9 +275,7 @@ contract MailboxFacet is Base, IMailbox {
 
         s.isEthWithdrawalFinalized[_l2BatchNumber][_l2MessageIndex] = true;
         if (s.secondaryChains[_l1WithdrawReceiver].valid) {
-            s.secondaryChains[_l1WithdrawReceiver].totalPendingWithdraw =
-                s.secondaryChains[_l1WithdrawReceiver].totalPendingWithdraw +
-                _amount;
+            s.secondaryChains[_l1WithdrawReceiver].totalPendingWithdraw += _amount;
         } else {
             _withdrawFunds(_l1WithdrawReceiver, _amount);
         }
@@ -341,8 +340,7 @@ contract MailboxFacet is Base, IMailbox {
                 syncStatus.amount = syncStatus.amount + _request.l2Value;
             }
             s.secondaryChainSyncStatus[_request.gateway][secondaryChain.totalPriorityTxs] = syncStatus;
-            secondaryChain.totalPriorityTxs = secondaryChain.totalPriorityTxs + 1;
-            s.secondaryChains[_request.gateway] = secondaryChain;
+            s.secondaryChains[_request.gateway].totalPriorityTxs = secondaryChain.totalPriorityTxs + 1;
         }
 
         // Here we manually assign fields for the struct to prevent "stack too deep" error

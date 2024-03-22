@@ -276,9 +276,7 @@ contract MailboxFacet is Base, IMailbox {
 
         s.isEthWithdrawalFinalized[_l2BatchNumber][_l2MessageIndex] = true;
         if (s.secondaryChains[_l1WithdrawReceiver].valid) {
-            s.secondaryChains[_l1WithdrawReceiver].totalPendingWithdraw =
-                s.secondaryChains[_l1WithdrawReceiver].totalPendingWithdraw +
-                _amount;
+            s.secondaryChains[_l1WithdrawReceiver].totalPendingWithdraw += _amount;
         } else {
             _withdrawFunds(_l1WithdrawReceiver, _amount);
         }

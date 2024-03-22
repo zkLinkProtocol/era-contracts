@@ -32,9 +32,11 @@ contract MailboxFacet is Base, IMailbox {
     /// @inheritdoc IBase
     string public constant override getName = "MailboxFacet";
 
-    // keccak256("ForwardL2Request(address gateway,bool isContractCall,address sender,uint256 txId,address contractAddressL2,uint256 l2Value,bytes32 l2CallDataHash,uint256 l2GasLimit,uint256 l2GasPricePerPubdata,bytes32 factoryDepsHash,address refundRecipient)")
+    /// @dev The forward request type hash
     bytes32 public constant FORWARD_REQUEST_TYPE_HASH =
-        0xe0aaca1722ef50bb0c9b032e5b16ce2b79fa9f23638835456b27fd6894f8292c;
+        keccak256(
+            "ForwardL2Request(address gateway,bool isContractCall,address sender,uint256 txId,address contractAddressL2,uint256 l2Value,bytes32 l2CallDataHash,uint256 l2GasLimit,uint256 l2GasPricePerPubdata,bytes32 factoryDepsHash,address refundRecipient)"
+        );
 
     /// @inheritdoc IMailbox
     function proveL2MessageInclusion(

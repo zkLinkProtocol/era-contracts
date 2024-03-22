@@ -183,8 +183,7 @@ contract MailboxFacet is Base, IMailbox {
         require(msg.value == _forwardEthAmount, "smv");
 
         // Update totalSyncedPriorityTxs
-        secondaryChain.totalSyncedPriorityTxs = _newTotalSyncedPriorityTxs;
-        s.secondaryChains[_secondaryChainGateway] = secondaryChain;
+        s.secondaryChains[_secondaryChainGateway].totalSyncedPriorityTxs = _newTotalSyncedPriorityTxs;
         emit SyncL2Requests(_secondaryChainGateway, _newTotalSyncedPriorityTxs, _syncHash, _forwardEthAmount);
     }
 
@@ -341,8 +340,7 @@ contract MailboxFacet is Base, IMailbox {
                 syncStatus.amount = syncStatus.amount + _request.l2Value;
             }
             s.secondaryChainSyncStatus[_request.gateway][secondaryChain.totalPriorityTxs] = syncStatus;
-            secondaryChain.totalPriorityTxs = secondaryChain.totalPriorityTxs + 1;
-            s.secondaryChains[_request.gateway] = secondaryChain;
+            s.secondaryChains[_request.gateway].totalPriorityTxs = secondaryChain.totalPriorityTxs + 1;
         }
 
         // Here we manually assign fields for the struct to prevent "stack too deep" error

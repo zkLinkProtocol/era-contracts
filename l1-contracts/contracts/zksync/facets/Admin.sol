@@ -22,6 +22,7 @@ contract AdminFacet is Base, IAdmin {
     /// @inheritdoc IAdmin
     function setGateway(IL2Gateway _gateway) external onlyGovernor {
         require(address(s.gateway) == address(0), "g9");
+        require(address(_gateway) != address(0), "ga");
         s.gateway = _gateway;
         emit InitGateway(_gateway);
     }

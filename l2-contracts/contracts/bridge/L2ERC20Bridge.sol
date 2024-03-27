@@ -117,7 +117,7 @@ contract L2ERC20Bridge is IL2Bridge, Initializable {
     function depositToMerge(address _l2Token, uint256 _amount, address _l2Receiver) external {
         require(msg.sender == address(this), "Only bridge can call this function");
         IL2StandardToken(_l2Token).bridgeMint(address(this), _amount);
-        IERC20Upgradeable(_l2Token).safeApprove(address(MERGE_TOKEN_PORTAL), _amount);
+        IERC20Upgradeable(_l2Token).safeIncreaseAllowance(address(MERGE_TOKEN_PORTAL), _amount);
         MERGE_TOKEN_PORTAL.deposit(_l2Token, _amount, _l2Receiver);
     }
 

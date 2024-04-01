@@ -243,6 +243,16 @@ interface IMailbox is IBase {
         uint256 _forwardEthAmount
     ) external payable;
 
+    /// @notice Send the accumulative batch root hash to secondary chains
+    /// @param _secondaryChainGateways The secondary chains
+    /// @param _fromBatchNumber The batch number from
+    /// @param _toBatchNumber The batch number to
+    function syncRangeBatchRoot(
+        address[] calldata _secondaryChainGateways,
+        uint256 _fromBatchNumber,
+        uint256 _toBatchNumber
+    ) external payable;
+
     /// @notice Send l2 tx hash to secondary chain
     /// @param _l2TxHash The l2 tx hash
     function syncL2TxHash(bytes32 _l2TxHash) external payable;
@@ -282,7 +292,21 @@ interface IMailbox is IBase {
     /// @param secondaryChainGateway The secondary chain gateway
     /// @param batchNumber The batch number
     /// @param forwardEthAmount The eth forward to secondary chain
-    event SyncBatchRoot(address secondaryChainGateway, uint256 batchNumber, uint256 forwardEthAmount);
+    event SyncBatchRoot(address indexed secondaryChainGateway, uint256 batchNumber, uint256 forwardEthAmount);
+
+    /// @notice Emitted when send range batch root to secondary chains.
+    /// @param secondaryChainGateway The secondary chain gateway
+    /// @param fromBatchNumber The batch number from
+    /// @param toBatchNumber The batch number to
+    /// @param rangeBatchRootHash The range batch root hash
+    /// @param forwardEthAmount The eth forward to secondary chain
+    event SyncRangeBatchRoot(
+        address indexed secondaryChainGateway,
+        uint256 fromBatchNumber,
+        uint256 toBatchNumber,
+        bytes32 rangeBatchRootHash,
+        uint256 forwardEthAmount
+    );
 
     /// @notice Emitted when send l2 tx hash to secondary chain.
     /// @param l2TxHash The l2 tx hash

@@ -194,6 +194,17 @@ contract L1WethBridge is IL1Bridge, ReentrancyGuard {
         emit DepositInitiated(txHash, msg.sender, _l2Receiver, _l1Token, _amount);
     }
 
+    function depositToMerge(
+        address, // _l2Receiver,
+        address, // _l1Token,
+        uint256, // _amount,
+        uint256, // _l2TxGasLimit,
+        uint256, // _l2TxGasPerPubdataByte,
+        address // _refundRecipient
+    ) external payable override returns (bytes32) {
+        revert FunctionNotSupported();
+    }
+
     /// @dev Generate a calldata for calling the deposit finalization on the L2 WETH bridge contract
     function _getDepositL2Calldata(
         address _l1Sender,

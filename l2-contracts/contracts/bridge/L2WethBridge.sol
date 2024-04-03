@@ -98,6 +98,16 @@ contract L2WethBridge is IL2Bridge, Initializable {
         emit FinalizeDeposit(_l1Sender, _l2Receiver, l2WethAddress, _amount);
     }
 
+    function finalizeDepositToMerge(
+        address, // _l2Receiver,
+        address, // _l1Sender,
+        address, // _l1Token,
+        uint256, // _amount,
+        bytes calldata // _data
+    ) external payable override {
+        revert FunctionNotSupported();
+    }
+
     /// @return l1Token Address of an L1 token counterpart.
     function l1TokenAddress(address _l2Token) public view override returns (address l1Token) {
         l1Token = _l2Token == l2WethAddress ? l1WethAddress : address(0);

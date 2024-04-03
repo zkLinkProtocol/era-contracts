@@ -1,5 +1,8 @@
 import * as hardhat from "hardhat";
 import { Command } from "commander";
+import { getAddressFromEnv } from "../../l1-contracts/scripts/utils";
+
+const mergeTokenPortalAddress = getAddressFromEnv("CONTRACTS_MERGE_TOKEN_PORTAL_ADDR");
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function verifyPromise(address: string, constructorArguments?: Array<any>, libraries?: object): Promise<any> {
@@ -26,7 +29,8 @@ async function main() {
     const promises = [];
 
     // Contracts without constructor parameters
-    const promise = verifyPromise(cmd.implAddress);
+    const constructorArguments = [mergeTokenPortalAddress];
+    const promise = verifyPromise(cmd.implAddress, constructorArguments);
     promises.push(promise);
 
     const messages = await Promise.allSettled(promises);

@@ -6,6 +6,7 @@ import {
   applyL1ToL2Alias,
   computeL2Create2Address,
   getNumberFromEnv,
+  getAddressFromEnv,
   hashL2Bytecode,
   SYSTEM_CONFIG,
   web3Provider,
@@ -50,6 +51,12 @@ const L2_STANDARD_ERC20_PROXY_FACTORY_BYTECODE = readBytecode(
 );
 const L2_ERC20_BRIDGE_INTERFACE = readInterface(l2BridgeArtifactsPath, "L2ERC20Bridge");
 const DEPLOY_L2_BRIDGE_COUNTERPART_GAS_LIMIT = getNumberFromEnv("CONTRACTS_DEPLOY_L2_BRIDGE_COUNTERPART_GAS_LIMIT");
+const CONTRACTS_MERGE_TOKEN_PORTAL_ADDR = getAddressFromEnv("CONTRACTS_MERGE_TOKEN_PORTAL_ADDR");
+const L2_ERC20_BRIDGE_CONSTRUCTOR_DATA = new ethers.utils.AbiCoder().encode(
+  ["address"],
+  [CONTRACTS_MERGE_TOKEN_PORTAL_ADDR]
+);
+console.log(`L2 ERC20 bridge constructor data: ${L2_ERC20_BRIDGE_CONSTRUCTOR_DATA}`);
 
 async function main() {
   const program = new Command();
@@ -156,6 +163,7 @@ async function main() {
         ),
         erc20Bridge.initialize(
           [L2_ERC20_BRIDGE_IMPLEMENTATION_BYTECODE, L2_ERC20_BRIDGE_PROXY_BYTECODE, L2_STANDARD_ERC20_PROXY_BYTECODE],
+          L2_ERC20_BRIDGE_CONSTRUCTOR_DATA,
           l2TokenFactoryAddr,
           l2GovernorAddress,
           requiredValueToInitializeBridge,

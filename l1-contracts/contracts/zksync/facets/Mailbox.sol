@@ -66,7 +66,7 @@ contract MailboxFacet is Base, IMailbox {
         uint16 _l2TxNumberInBatch,
         bytes32[] calldata _merkleProof,
         TxStatus _status
-    ) public view returns (bool) {
+    ) external view returns (bool) {
         // Bootloader sends an L2 -> L1 log only after processing the L1 -> L2 transaction.
         // Thus, we can verify that the L1 -> L2 transaction was included in the L2 batch with specified status.
         //
@@ -143,7 +143,7 @@ contract MailboxFacet is Base, IMailbox {
         uint256 _gasPrice,
         uint256 _l2GasLimit,
         uint256 _l2GasPerPubdataByteLimit
-    ) public view returns (uint256) {
+    ) external view returns (uint256) {
         uint256 l2GasPrice = _deriveL2GasPrice(_gasPrice, _l2GasPerPubdataByteLimit);
         return l2GasPrice * _l2GasLimit;
     }

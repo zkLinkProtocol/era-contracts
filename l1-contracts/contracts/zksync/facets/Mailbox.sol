@@ -208,14 +208,69 @@ contract MailboxFacet is Base, IMailbox {
             _forwardEthAmount;
 
         // Send batch root to secondary chain by gateway
-        bytes memory finalCallData = abi.encodeCall(
+        bytes[] memory gatewayDataList = new bytes[](1);
+        bytes memory callData = abi.encodeCall(
             IZkLink.syncBatchRoot,
             (_batchNumber, l2LogsRootHash, _forwardEthAmount)
         );
-        bytes memory callData = abi.encode(_secondaryChainGateway, finalCallData);
+        gatewayDataList[0] = abi.encode(_secondaryChainGateway, _forwardEthAmount, callData);
         // Forward fee to gateway
-        s.gateway.sendMessage{value: msg.value + _forwardEthAmount}(_forwardEthAmount, callData);
+        s.gateway.sendMessage{value: msg.value + _forwardEthAmount}(_forwardEthAmount, abi.encode(gatewayDataList));
         emit SyncBatchRoot(_secondaryChainGateway, _batchNumber, _forwardEthAmount);
+    }
+
+    /// @inheritdoc IMailbox
+    function syncRangeBatchRoot(
+        address[] calldata _secondaryChainGateways,
+        uint256 _fromBatchNumber,
+        uint256 _toBatchNumber
+    ) external payable nonReentrant onlyValidator {
+        // The batch should be executed
+        require(_fromBatchNumber <= _toBatchNumber, "brf");
+        require(_toBatchNumber <= s.totalBatchesExecuted, "brt");
+
+        bytes32 rangeBatchRootHash = s.l2LogsRootHashes[_fromBatchNumber];
+        unchecked {
+            for (uint256 i = _fromBatchNumber + 1; i <= _toBatchNumber; ++i) {
+                bytes32 l2LogsRootHash = s.l2LogsRootHashes[i];
+                rangeBatchRootHash = Merkle._efficientHash(rangeBatchRootHash, l2LogsRootHash);
+            }
+        }
+
+        uint256 gatewayLength = _secondaryChainGateways.length;
+        bytes[] memory gatewayDataList = new bytes[](gatewayLength);
+        uint256 totalForwardEthAmount = 0;
+        unchecked {
+            for (uint256 i = 0; i < gatewayLength; ++i) {
+                // Secondary chain should be registered
+                address _secondaryChainGateway = _secondaryChainGateways[i];
+                SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
+                require(secondaryChain.valid, "bsc");
+                uint256 _forwardEthAmount = s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw;
+                // Withdraw eth amount impossible overflow
+                totalForwardEthAmount += _forwardEthAmount;
+                s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw = 0;
+                // Send range batch root to secondary chain
+                bytes memory gatewayCallData = abi.encodeCall(
+                    IZkLink.syncRangeBatchRoot,
+                    (_fromBatchNumber, _toBatchNumber, rangeBatchRootHash, _forwardEthAmount)
+                );
+                gatewayDataList[i] = abi.encode(_secondaryChainGateway, _forwardEthAmount, gatewayCallData);
+                emit SyncRangeBatchRoot(
+                    _secondaryChainGateway,
+                    _fromBatchNumber,
+                    _toBatchNumber,
+                    rangeBatchRootHash,
+                    _forwardEthAmount
+                );
+            }
+        }
+
+        // Forward fee to gateway
+        s.gateway.sendMessage{value: msg.value + totalForwardEthAmount}(
+            totalForwardEthAmount,
+            abi.encode(gatewayDataList)
+        );
     }
 
     /// @inheritdoc IMailbox
@@ -224,10 +279,11 @@ contract MailboxFacet is Base, IMailbox {
         require(op.gateway != address(0), "tsc");
 
         // Send l2 tx hash to secondary chain by gateway
-        bytes memory finalCallData = abi.encodeCall(IZkLink.syncL2TxHash, (op.canonicalTxHash, _l2TxHash));
-        bytes memory callData = abi.encode(op.gateway, finalCallData);
+        bytes[] memory gatewayDataList = new bytes[](1);
+        bytes memory callData = abi.encodeCall(IZkLink.syncL2TxHash, (op.canonicalTxHash, _l2TxHash));
+        gatewayDataList[0] = abi.encode(op.gateway, 0, callData);
         // Forward fee to gateway
-        s.gateway.sendMessage{value: msg.value}(0, callData);
+        s.gateway.sendMessage{value: msg.value}(0, abi.encode(gatewayDataList));
         emit SyncL2TxHash(_l2TxHash);
     }
 

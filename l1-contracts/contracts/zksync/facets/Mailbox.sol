@@ -274,7 +274,7 @@ contract MailboxFacet is Base, IMailbox {
     }
 
     /// @inheritdoc IMailbox
-    function syncL2TxHash(bytes32 _l2TxHash) external payable nonReentrant onlyValidator {
+    function syncL2TxHash(bytes32 _l2TxHash) external payable nonReentrant {
         SecondaryChainOp memory op = s.canonicalTxToSecondaryChainOp[_l2TxHash];
         require(op.gateway != address(0), "tsc");
 

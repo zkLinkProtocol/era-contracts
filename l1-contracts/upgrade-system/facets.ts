@@ -21,7 +21,7 @@ async function deployFacetCut(
 ) {
   create2Salt = create2Salt ?? ethers.constants.HashZero;
 
-  ethTxOptions["gasLimit"] = 10_000_000;
+  ethTxOptions["gasLimit"] = 3_000_000;
   const [address, txHash] = await deployViaCreate2(wallet, name, [], create2Salt, ethTxOptions, create2Address, true);
 
   console.log(`Deployed ${name} at ${address} with txHash ${txHash}`);

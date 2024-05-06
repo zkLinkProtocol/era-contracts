@@ -240,30 +240,28 @@ contract MailboxFacet is Base, IMailbox {
         uint256 gatewayLength = _secondaryChainGateways.length;
         bytes[] memory gatewayDataList = new bytes[](gatewayLength);
         uint256 totalForwardEthAmount = 0;
-        unchecked {
-            for (uint256 i = 0; i < gatewayLength; ++i) {
-                // Secondary chain should be registered
-                address _secondaryChainGateway = _secondaryChainGateways[i];
-                SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
-                require(secondaryChain.valid, "bsc");
-                uint256 _forwardEthAmount = s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw;
-                // Withdraw eth amount impossible overflow
-                totalForwardEthAmount += _forwardEthAmount;
-                s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw = 0;
-                // Send range batch root to secondary chain
-                bytes memory gatewayCallData = abi.encodeCall(
-                    IZkLink.syncRangeBatchRoot,
-                    (_fromBatchNumber, _toBatchNumber, rangeBatchRootHash, _forwardEthAmount)
-                );
-                gatewayDataList[i] = abi.encode(_secondaryChainGateway, _forwardEthAmount, gatewayCallData);
-                emit SyncRangeBatchRoot(
-                    _secondaryChainGateway,
-                    _fromBatchNumber,
-                    _toBatchNumber,
-                    rangeBatchRootHash,
-                    _forwardEthAmount
-                );
-            }
+        for (uint256 i = 0; i < gatewayLength; i = i.uncheckedInc()) {
+            // Secondary chain should be registered
+            address _secondaryChainGateway = _secondaryChainGateways[i];
+            SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
+            require(secondaryChain.valid, "bsc");
+            uint256 _forwardEthAmount = s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw;
+            // Withdraw eth amount impossible overflow
+            totalForwardEthAmount += _forwardEthAmount;
+            s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw = 0;
+            // Send range batch root to secondary chain
+            bytes memory gatewayCallData = abi.encodeCall(
+                IZkLink.syncRangeBatchRoot,
+                (_fromBatchNumber, _toBatchNumber, rangeBatchRootHash, _forwardEthAmount)
+            );
+            gatewayDataList[i] = abi.encode(_secondaryChainGateway, _forwardEthAmount, gatewayCallData);
+            emit SyncRangeBatchRoot(
+                _secondaryChainGateway,
+                _fromBatchNumber,
+                _toBatchNumber,
+                rangeBatchRootHash,
+                _forwardEthAmount
+            );
         }
 
         // Forward fee to gateway

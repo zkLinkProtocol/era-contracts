@@ -245,7 +245,7 @@ contract MailboxFacet is Base, IMailbox {
             address _secondaryChainGateway = _secondaryChainGateways[i];
             SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
             require(secondaryChain.valid, "bsc");
-            uint256 _forwardEthAmount = s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw;
+            uint256 _forwardEthAmount = secondaryChain.totalPendingWithdraw;
             // Withdraw eth amount impossible overflow
             totalForwardEthAmount += _forwardEthAmount;
             s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw = 0;

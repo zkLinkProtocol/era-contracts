@@ -105,6 +105,10 @@ interface IExecutor is IBase {
     /// @param _batchesData Data of the batches to be executed.
     function isBatchesSynced(StoredBatchInfo[] calldata _batchesData) external view returns (bool);
 
+    /// @notice Check if data is public
+    /// @param _commitment Commitment of the batch.
+    function isBatchDataAvailable(bytes32 _commitment) external view returns (bool);
+
     /// @notice The function called by the operator to finalize (execute) batches. It is responsible for:
     /// - Processing all pending operations (commpleting priority requests).
     /// - Finalizing this batch (i.e. allowing to withdraw funds from the system)

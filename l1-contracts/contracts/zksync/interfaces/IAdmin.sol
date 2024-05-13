@@ -6,6 +6,7 @@ import {IBase} from "./IBase.sol";
 import {Diamond} from "../libraries/Diamond.sol";
 import {FeeParams} from "../Storage.sol";
 import {IL2Gateway} from "./IL2Gateway.sol";
+import {IDAVerifier} from "./IDAVerifier.sol";
 
 /// @title The interface of the Admin Contract that controls access rights for contract management.
 /// @author Matter Labs
@@ -19,6 +20,10 @@ interface IAdmin is IBase {
     /// @param _gateway The secondary chain gateway on local chain
     /// @param _active Active flag
     function setSecondaryChainGateway(address _gateway, bool _active) external;
+
+    /// @notice Update da verifier
+    /// @param _daVerifier The da verifier
+    function setDAVerifier(IDAVerifier _daVerifier) external;
 
     /// @notice Starts the transfer of governor rights. Only the current governor can propose a new pending one.
     /// @notice New governor can accept governor rights by calling `acceptGovernor` function.
@@ -71,6 +76,9 @@ interface IAdmin is IBase {
 
     /// @notice SecondaryChain's status changed
     event SecondaryChainStatusUpdate(address indexed gateway, bool isActive);
+
+    /// @notice DAVerifier updated
+    event DAVerifierUpdate(IDAVerifier indexed daVerifier);
 
     /// @notice Porter availability status changes
     event IsPorterAvailableStatusUpdate(bool isPorterAvailable);

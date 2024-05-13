@@ -11,6 +11,7 @@ import {IL2Gateway} from "../interfaces/IL2Gateway.sol";
 
 // While formally the following import is not used, it is needed to inherit documentation from it
 import {IBase} from "../interfaces/IBase.sol";
+import {IDAVerifier} from "../interfaces/IDAVerifier.sol";
 
 /// @title Admin Contract controls access rights for contract management.
 /// @author Matter Labs
@@ -32,6 +33,15 @@ contract AdminFacet is Base, IAdmin {
         if (s.secondaryChains[_gateway].valid != _active) {
             s.secondaryChains[_gateway].valid = _active;
             emit SecondaryChainStatusUpdate(_gateway, _active);
+        }
+    }
+
+    /// @inheritdoc IAdmin
+    function setDAVerifier(IDAVerifier _daVerifier) external onlyGovernor {
+        require(address(_daVerifier) != address(0), "gb");
+        if (s.daVerifier != _daVerifier) {
+            s.daVerifier = _daVerifier;
+            emit DAVerifierUpdate(_daVerifier);
         }
     }
 

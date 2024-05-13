@@ -226,6 +226,21 @@ export class Deployer {
     this.addresses.ZkSync.Verifier = contractAddress;
   }
 
+  public async deployCelestiaDAVerifier(
+    daOracle: string,
+    create2Salt: string,
+    ethTxOptions: ethers.providers.TransactionRequest
+  ) {
+    ethTxOptions.gasLimit ??= L1_GAS_LIMIT;
+    const contractAddress = await this.deployViaCreate2("CelestiaDAVerifier", [daOracle], create2Salt, ethTxOptions);
+
+    if (this.verbose) {
+      console.log(`CONTRACTS_DA_VERIFIER_ADDR=${contractAddress}`);
+    }
+
+    this.addresses.ZkSync.DAVerifier = contractAddress;
+  }
+
   public async deployERC20BridgeImplementation(create2Salt: string, ethTxOptions: ethers.providers.TransactionRequest) {
     ethTxOptions.gasLimit ??= L1_GAS_LIMIT;
     const contractAddress = await this.deployViaCreate2(

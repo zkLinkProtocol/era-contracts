@@ -286,6 +286,9 @@ contract ExecutorFacet is Base, IExecutor {
         bytes32 priorityOperationsHash = _collectOperationsFromPriorityQueue(_storedBatch.numberOfLayer1Txs);
         require(priorityOperationsHash == _storedBatch.priorityOperationsHash, "x"); // priority operations hash does not match to expected
 
+        // Public data should be available
+        require(isBatchDataAvailable(_storedBatch.commitment), "x1");
+
         // Save root hash of L2 -> L1 logs tree
         s.l2LogsRootHashes[currentBatchNumber] = _storedBatch.l2LogsTreeRoot;
     }
@@ -309,6 +312,14 @@ contract ExecutorFacet is Base, IExecutor {
             }
         }
         return true;
+    }
+
+    /// @inheritdoc IExecutor
+    function isBatchDataAvailable(bytes32 _commitment) public view returns (bool) {
+        if (address(s.daVerifier) == address(0)) {
+            return true;
+        }
+        return s.daVerifier.isValidCommitment(_commitment);
     }
 
     /// @inheritdoc IExecutor

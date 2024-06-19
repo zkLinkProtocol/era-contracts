@@ -84,7 +84,8 @@
     "upgrade-system": "ts-node upgrade-system/index.ts",
     "set-gateway": "ts-node scripts/set-gateway.ts",
     "set-admin": "ts-node scripts/set-admin.ts",
-    "deploy-l1-erc20-bridge-imple": "ts-node scripts/deploy-l1-erc20-bridge-impl.ts"
+    "deploy-l1-erc20-bridge-imple": "ts-node scripts/deploy-l1-erc20-bridge-impl.ts",
+    "replace-tx": "ts-node scripts/replace-tx.ts"
   },
   "dependencies": {
     "dotenv": "^16.0.3"

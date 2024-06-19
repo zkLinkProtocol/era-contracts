@@ -5,6 +5,7 @@ interface IMergeTokenPortal {
     /// @notice Source token info
     /// @param isSupported Is the source token supported
     /// @param isLocked Is the source token locked
+    /// @param mergeToken Deposit source token will receive the merge token
     /// @param balance Source token balance
     /// @param depositLimit Source token deposit limit
     struct SourceTokenInfo {

@@ -28,6 +28,16 @@ interface IL2Bridge {
         uint256 amount
     );
 
+    event RebalanceFinalized(address indexed l1Token, address indexed destL2Erc20Bridge, uint256 amount);
+
+    event RebalanceStandardErc20(
+        address indexed l1Token,
+        address indexed destL2Erc20Bridge,
+        address indexed l2Token,
+        address fromL2Token,
+        uint256 amount
+    );
+
     function finalizeDeposit(
         address _l1Sender,
         address _l2Receiver,

@@ -19,7 +19,7 @@ async function sendTxToGovernance(wallet: Wallet, data: string, value: ethers.Bi
   const tx = await wallet.sendTransaction({ to: governanceAddress, data: data, value: value });
   console.log(`Transaction sent: ${tx.hash}`);
   await tx.wait();
-  console.log(`Transaction executed`);
+  console.log("Transaction executed");
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

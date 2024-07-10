@@ -38,4 +38,11 @@ interface IMergeTokenPortal {
      * @param _receiver Recceiver address
      */
     function withdraw(address _sourceToken, uint256 _amount, address _receiver) external;
+
+    function rebalanceSourceToken(
+        address _sourceToken,
+        address _l2Erc20Bridge,
+        uint256 _amount,
+        address _rebalanceFromToken
+    ) external;
 }

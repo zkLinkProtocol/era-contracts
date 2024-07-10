@@ -27,4 +27,6 @@ interface IL2Bridge {
     function l2TokenAddress(address _l1Token) external view returns (address);
 
     function l1Bridge() external view returns (address);
+
+    function finalizeRebalance(address _l1Token, uint256 _amount, address _rebalancefromL2Bridge) external;
 }

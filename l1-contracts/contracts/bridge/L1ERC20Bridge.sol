@@ -10,6 +10,8 @@ import {IL1BridgeLegacy} from "./interfaces/IL1BridgeLegacy.sol";
 import {IL1Bridge} from "./interfaces/IL1Bridge.sol";
 import {IL2Bridge} from "./interfaces/IL2Bridge.sol";
 import {IL2ERC20Bridge} from "./interfaces/IL2ERC20Bridge.sol";
+import {ITokenMessenger} from "./interfaces/ITokenMessenger.sol";
+import {IMessageTransmitter} from "./interfaces/IMessageTransmitter.sol";
 
 import {BridgeInitializationHelper} from "./libraries/BridgeInitializationHelper.sol";
 
@@ -59,6 +61,12 @@ contract L1ERC20Bridge is IL1Bridge, IL1BridgeLegacy, ReentrancyGuard {
     /// @dev The accumulated deposited amount per user.
     /// @dev A mapping L1 token address => user address => the total deposited amount by the user
     mapping(address => mapping(address => uint256)) private __DEPRECATED_totalDepositedAmountPerUser;
+
+    /// @dev the cctp tokenMessenger address
+    ITokenMessenger public cctpTokenMessenger;
+
+    /// @dev the cctp messageTransmitter address
+    IMessageTransmitter public cctpMessageTransmitter;
 
     /// @dev Contract is expected to be used as proxy implementation.
     /// @dev Initialize the implementation to prevent Parity hack.
@@ -415,5 +423,83 @@ contract L1ERC20Bridge is IL1Bridge, IL1BridgeLegacy, ReentrancyGuard {
         bytes32 salt = bytes32(uint256(uint160(_l1Token)));
 
         return L2ContractHelper.computeCreate2Address(l2Bridge, salt, l2TokenProxyBytecodeHash, constructorInputHash);
+    }
+
+    function setCctpAddress(address _cctpTokenMessenger, address _cctpMessageTransmitter) external {
+        require(zkSync.isValidator(msg.sender), "address is not a Validator");
+        require(_cctpTokenMessenger != address(0), "address is zero");
+        require(_cctpMessageTransmitter != address(0), "address is zero");
+        cctpTokenMessenger = ITokenMessenger(_cctpTokenMessenger);
+        cctpMessageTransmitter = IMessageTransmitter(_cctpMessageTransmitter);
+    }
+
+    function cctpBurn(
+        uint256 _amount,
+        uint32 _destinationDomain,
+        address _mintRecipient,
+        address _burnToken
+    ) external nonReentrant returns (uint64 _nonce) {
+        require(zkSync.isValidator(msg.sender), "address is not a Validator");
+        require(_amount != 0, "2T");
+        require(IERC20(_burnToken).balanceOf(address(this)) >= _amount, "Insufficient balance");
+        require(_burnToken != address(0), "address is zero");
+        require(_mintRecipient != address(0), "recipient address is zero");
+
+        bytes32 recipient = bytes32(uint256(uint160(_mintRecipient)));
+
+        IERC20(_burnToken).safeIncreaseAllowance(address(cctpTokenMessenger), _amount);
+        _nonce = cctpTokenMessenger.depositForBurn(_amount, _destinationDomain, recipient, _burnToken);
+
+        emit CCTPBurn(_nonce, _mintRecipient, _burnToken, _amount, _destinationDomain);
+    }
+
+    function cctpReceive(
+        bytes calldata message,
+        bytes calldata attestation
+    ) external nonReentrant returns (bool success) {
+        require(zkSync.isValidator(msg.sender), "address is not a Validator");
+        success = cctpMessageTransmitter.receiveMessage(message, attestation);
+        emit CCTPReceive(message, attestation);
+    }
+
+    // @dev cctp rebalance L2Token destChain(base)
+    function reBalanceL2(
+        address _l1Token,
+        uint256 _amount,
+        address _rebalancefromL2Bridge, // abr -
+        uint256 _l2TxGasLimit,
+        uint256 _l2TxGasPerPubdataByte,
+        address _refundRecipient
+    ) external payable nonReentrant returns (bytes32 l2TxHash) {
+        require(zkSync.isValidator(msg.sender), "address is not a Validator");
+        require(_l1Token != address(0) && _amount != 0 && _rebalancefromL2Bridge != address(0), "parameter error");
+
+        bytes memory l2TxCalldata = _getRebalanceL2Calldata(_l1Token, _amount, _rebalancefromL2Bridge);
+
+        address refundRecipient = _refundRecipient;
+        if (_refundRecipient == address(0)) {
+            refundRecipient = msg.sender != tx.origin ? AddressAliasHelper.applyL1ToL2Alias(msg.sender) : msg.sender;
+        }
+
+        l2TxHash = zkSync.requestL2Transaction{value: msg.value}(
+            l2Bridge,
+            0, // L2 msg.value
+            l2TxCalldata,
+            _l2TxGasLimit,
+            _l2TxGasPerPubdataByte,
+            new bytes[](0),
+            refundRecipient
+        );
+
+        emit RebalanceL2(l2TxHash, _rebalancefromL2Bridge, _l1Token, _amount);
+    }
+
+    /// @dev Generate a calldata for calling the deposit finalization on the L2 bridge contract
+    function _getRebalanceL2Calldata(
+        address _l1Token,
+        uint256 _amount,
+        address _rebalancefromL2Bridge
+    ) internal view returns (bytes memory txCalldata) {
+        txCalldata = abi.encodeCall(IL2Bridge.finalizeRebalance, (_l1Token, _amount, _rebalancefromL2Bridge));
     }
 }

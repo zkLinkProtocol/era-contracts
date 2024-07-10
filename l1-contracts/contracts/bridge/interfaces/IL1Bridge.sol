@@ -29,6 +29,23 @@ interface IL1Bridge {
 
     event ClaimedFailedDeposit(address indexed to, address indexed l1Token, uint256 amount);
 
+    event CCTPBurn(
+        uint64 indexed _nonce,
+        address indexed _mintRecipient,
+        address indexed _burnToken,
+        uint256 _amount,
+        uint32 _destinationDomain
+    );
+
+    event CCTPReceive(bytes message, bytes attestation);
+
+    event RebalanceL2(
+        bytes32 indexed l2RebalanceTxHash,
+        address indexed _l2Token,
+        address indexed _destL2Erc20Bridge,
+        uint256 _amount
+    );
+
     function isWithdrawalFinalized(uint256 _l2BatchNumber, uint256 _l2MessageIndex) external view returns (bool);
 
     function deposit(

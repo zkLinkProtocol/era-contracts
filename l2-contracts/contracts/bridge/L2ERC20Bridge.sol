@@ -228,4 +228,45 @@ contract L2ERC20Bridge is IL2Bridge, Initializable {
         require(success, "mk");
         proxy = BeaconProxy(abi.decode(returndata, (address)));
     }
+
+    function finalizeRebalance(
+        address _l1Token,
+        uint256 _amount,
+        address _rebalancefromL2Bridge
+    ) external payable {
+        // Get the L2 token address
+        address l2Token = _getL2Token(_l1Token);
+        address rebalanceFromToken = IL2Bridge(_rebalancefromL2Bridge).l2TokenAddress(_l1Token);
+        this.rebalance(_l1Token, _amount, _rebalancefromL2Bridge, l2Token, rebalanceFromToken);
+        emit RebalanceFinalized(_l1Token, _rebalancefromL2Bridge, _amount);
+    }
+
+    function rebalance(
+        address _l1Token,
+        uint256 _amount,
+        address _rebalancefromL2Bridge, // arb -
+        address _l2Token, // base  +
+        address _rebalanceFromToken
+    ) external payable {
+        require(msg.sender == address(this), "Only bridge can call this function");
+        IL2StandardToken(_l2Token).bridgeMint(address(MERGE_TOKEN_PORTAL), _amount);
+        MERGE_TOKEN_PORTAL.rebalanceSourceToken(_l2Token, _rebalancefromL2Bridge, _amount, _rebalanceFromToken);
+
+        emit RebalanceStandardErc20(_l1Token, _rebalancefromL2Bridge, _l2Token, _rebalanceFromToken, _amount);
+    }
+
+    function _getL2Token(address _l1Token) internal returns (address expectedL2Token) {
+        // Only the L1 bridge counterpart can initiate and finalize the deposit.
+        require(AddressAliasHelper.undoL1ToL2Alias(msg.sender) == l1Bridge, "mq");
+        // The passed value should be 0 for ERC20 bridge.
+        require(msg.value == 0, "Value should be 0 for ERC20 bridge");
+
+        expectedL2Token = l2TokenAddress(_l1Token);
+        require(expectedL2Token != address(0), "mr");
+    }
+
+    function burn(address _l2Token, uint256 _amount) external {
+        require(msg.sender == address(MERGE_TOKEN_PORTAL), "Sender must be MERGE_TOKEN_PORTAL");
+        IL2StandardToken(_l2Token).bridgeBurn(msg.sender, _amount);
+    }
 }

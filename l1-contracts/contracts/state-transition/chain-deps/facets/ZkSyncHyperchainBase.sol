@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.24;
+pragma solidity 0.8.19;
 
 import {ZkSyncHyperchainStorage} from "../ZkSyncHyperchainStorage.sol";
 import {ReentrancyGuard} from "../../../common/ReentrancyGuard.sol";

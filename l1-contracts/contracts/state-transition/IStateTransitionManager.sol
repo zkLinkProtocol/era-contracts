@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.24;
+pragma solidity 0.8.19;
 
 import {Diamond} from "./libraries/Diamond.sol";
 import {L2CanonicalTransaction} from "../common/Messaging.sol";

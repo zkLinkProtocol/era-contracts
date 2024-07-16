@@ -15,7 +15,7 @@ if (!process.env.CHAIN_ETH_NETWORK) {
 export default {
   defaultNetwork: "env",
   solidity: {
-    version: "0.8.24",
+    version: "0.8.19",
     settings: {
       optimizer: {
         enabled: true,
@@ -26,7 +26,7 @@ export default {
           "*": ["storageLayout"],
         },
       },
-      evmVersion: "cancun",
+      evmVersion: "london",
     },
   },
   contractSizer: {

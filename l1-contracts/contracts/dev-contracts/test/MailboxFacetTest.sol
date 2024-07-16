@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.24;
+pragma solidity 0.8.19;
 
 import {FeeParams} from "../../state-transition/chain-deps/ZkSyncHyperchainStorage.sol";
 import {MailboxFacet} from "../../state-transition/chain-deps/facets/Mailbox.sol";

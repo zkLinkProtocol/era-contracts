@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.24;
+pragma solidity 0.8.19;
 
 import {ZkSyncHyperchainBase} from "./ZkSyncHyperchainBase.sol";
 import {COMMIT_TIMESTAMP_NOT_OLDER, COMMIT_TIMESTAMP_APPROXIMATION_DELTA, EMPTY_STRING_KECCAK, L2_TO_L1_LOG_SERIALIZE_SIZE, MAX_L2_TO_L1_LOGS_COMMITMENT_BYTES, PACKED_L2_BLOCK_TIMESTAMP_MASK, PUBLIC_INPUT_SHIFT, POINT_EVALUATION_PRECOMPILE_ADDR} from "../../../common/Config.sol";
@@ -665,8 +665,9 @@ contract ExecutorFacet is ZkSyncHyperchainBase, IExecutor {
     }
 
     function _getBlobVersionedHash(uint256 _index) internal view virtual returns (bytes32 versionedHash) {
-        assembly {
-            versionedHash := blobhash(_index)
-        }
+//        assembly {
+//            versionedHash := blobhash(_index)
+//        }
+        revert("blob not support");
     }
 }

@@ -5,12 +5,13 @@ pragma solidity 0.8.19;
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IMailbox} from "../../chain-interfaces/IMailbox.sol";
+import {IZkLink} from "../../chain-interfaces/IZkLink.sol";
 import {ITransactionFilterer} from "../../chain-interfaces/ITransactionFilterer.sol";
 import {Merkle} from "../../libraries/Merkle.sol";
 import {PriorityQueue, PriorityOperation} from "../../libraries/PriorityQueue.sol";
 import {TransactionValidator} from "../../libraries/TransactionValidator.sol";
-import {WritePriorityOpParams, L2CanonicalTransaction, L2Message, L2Log, TxStatus, BridgehubL2TransactionRequest} from "../../../common/Messaging.sol";
-import {FeeParams, PubdataPricingMode} from "../ZkSyncHyperchainStorage.sol";
+import {WritePriorityOpParams, L2CanonicalTransaction, L2Message, L2Log, TxStatus, BridgehubL2TransactionRequest, ForwardL2Request} from "../../../common/Messaging.sol";
+import {FeeParams, PubdataPricingMode, SecondaryChain, SecondaryChainSyncStatus, SecondaryChainOp} from "../ZkSyncHyperchainStorage.sol";
 import {UncheckedMath} from "../../../common/libraries/UncheckedMath.sol";
 import {L2ContractHelper} from "../../../common/libraries/L2ContractHelper.sol";
 import {AddressAliasHelper} from "../../../vendor/AddressAliasHelper.sol";
@@ -33,6 +34,12 @@ contract MailboxFacet is ZkSyncHyperchainBase, IMailbox {
     /// @inheritdoc IZkSyncHyperchainBase
     string public constant override getName = "MailboxFacet";
 
+    /// @dev The forward request type hash
+    bytes32 public constant FORWARD_REQUEST_TYPE_HASH =
+        keccak256(
+            "ForwardL2Request(address gateway,bool isContractCall,address sender,uint256 txId,address contractAddressL2,uint256 l2Value,bytes32 l2CallDataHash,uint256 l2GasLimit,uint256 l2GasPricePerPubdata,bytes32 factoryDepsHash,address refundRecipient)"
+        );
+
     /// @dev Era's chainID
     uint256 immutable ERA_CHAIN_ID;
 
@@ -47,6 +54,10 @@ contract MailboxFacet is ZkSyncHyperchainBase, IMailbox {
         uint256 amount = address(this).balance;
         address baseTokenBridgeAddress = s.baseTokenBridge;
         IL1SharedBridge(baseTokenBridgeAddress).receiveEth{value: amount}(ERA_CHAIN_ID);
+    }
+
+    function receiveEth() external payable {
+        require(s.baseTokenBridge == msg.sender, "Mailbox: receiveEth not shared bridge");
     }
 
     /// @notice when requesting transactions through the bridgehub
@@ -156,6 +167,120 @@ contract MailboxFacet is ZkSyncHyperchainBase, IMailbox {
         return l2GasPrice * _l2GasLimit;
     }
 
+    /// @inheritdoc IMailbox
+    function syncL2Requests(
+        address _secondaryChainGateway,
+        uint256 _newTotalSyncedPriorityTxs,
+        bytes32 _syncHash,
+        uint256 _forwardEthAmount
+    ) external payable onlyGateway {
+        // Secondary chain should be registered
+        SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
+        require(secondaryChain.valid, "ssc");
+
+        // Check newTotalSyncedPriorityTxs
+        require(
+            _newTotalSyncedPriorityTxs <= secondaryChain.totalPriorityTxs &&
+                _newTotalSyncedPriorityTxs > secondaryChain.totalSyncedPriorityTxs,
+            "spt"
+        );
+
+        // Check sync hash at new point
+        SecondaryChainSyncStatus memory syncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][
+            _newTotalSyncedPriorityTxs - 1
+        ];
+        require(syncStatus.hash == _syncHash, "ssh");
+
+        // Check forward eth amount
+        SecondaryChainSyncStatus memory lastSyncStatus;
+        if (secondaryChain.totalSyncedPriorityTxs > 0) {
+            lastSyncStatus = s.secondaryChainSyncStatus[_secondaryChainGateway][
+                secondaryChain.totalSyncedPriorityTxs - 1
+            ];
+        }
+        require(syncStatus.amount - lastSyncStatus.amount == _forwardEthAmount, "sfm");
+        require(msg.value == _forwardEthAmount, "smv");
+        // Transfer eth to L1SharedBridge
+        IL1SharedBridge(s.baseTokenBridge).bridgehubDepositBaseToken{value: msg.value}(
+            s.chainId,
+            msg.sender,
+            ETH_TOKEN_ADDRESS,
+            msg.value
+        );
+
+        // Update totalSyncedPriorityTxs
+        s.secondaryChains[_secondaryChainGateway].totalSyncedPriorityTxs = _newTotalSyncedPriorityTxs;
+        emit SyncL2Requests(_secondaryChainGateway, _newTotalSyncedPriorityTxs, _syncHash, _forwardEthAmount);
+    }
+
+    /// @inheritdoc IMailbox
+    function syncRangeBatchRoot(
+        address[] calldata _secondaryChainGateways,
+        uint256 _fromBatchNumber,
+        uint256 _toBatchNumber
+    ) external payable nonReentrant onlyValidator {
+        // The batch should be executed
+        require(_fromBatchNumber <= _toBatchNumber, "brf");
+        require(_toBatchNumber <= s.totalBatchesExecuted, "brt");
+
+        bytes32 rangeBatchRootHash = s.l2LogsRootHashes[_fromBatchNumber];
+        unchecked {
+            for (uint256 i = _fromBatchNumber + 1; i <= _toBatchNumber; ++i) {
+                bytes32 l2LogsRootHash = s.l2LogsRootHashes[i];
+                rangeBatchRootHash = Merkle._efficientHash(rangeBatchRootHash, l2LogsRootHash);
+            }
+        }
+
+        uint256 gatewayLength = _secondaryChainGateways.length;
+        bytes[] memory gatewayDataList = new bytes[](gatewayLength);
+        uint256 totalForwardEthAmount = 0;
+        for (uint256 i = 0; i < gatewayLength; i = i.uncheckedInc()) {
+            // Secondary chain should be registered
+            address _secondaryChainGateway = _secondaryChainGateways[i];
+            SecondaryChain memory secondaryChain = s.secondaryChains[_secondaryChainGateway];
+            require(secondaryChain.valid, "bsc");
+            uint256 _forwardEthAmount = secondaryChain.totalPendingWithdraw;
+            // Withdraw eth amount impossible overflow
+            totalForwardEthAmount += _forwardEthAmount;
+            s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw = 0;
+            // Send range batch root to secondary chain
+            bytes memory gatewayCallData = abi.encodeCall(
+                IZkLink.syncRangeBatchRoot,
+                (_fromBatchNumber, _toBatchNumber, rangeBatchRootHash, _forwardEthAmount)
+            );
+            gatewayDataList[i] = abi.encode(_secondaryChainGateway, _forwardEthAmount, gatewayCallData);
+            emit SyncRangeBatchRoot({
+                secondaryChainGateway: _secondaryChainGateway,
+                fromBatchNumber: _fromBatchNumber,
+                toBatchNumber: _toBatchNumber,
+                rangeBatchRootHash: rangeBatchRootHash,
+                forwardEthAmount: _forwardEthAmount
+            });
+        }
+
+        // Withdraw eth from L1SharedBridge
+        IL1SharedBridge(s.baseTokenBridge).eraWithdrawETH(s.chainId, totalForwardEthAmount);
+        // Forward fee to gateway
+        s.gateway.sendMessage{value: msg.value + totalForwardEthAmount}(
+            totalForwardEthAmount,
+            abi.encode(gatewayDataList)
+        );
+    }
+
+    /// @inheritdoc IMailbox
+    function syncL2TxHash(bytes32 _l2TxHash) external payable nonReentrant {
+        SecondaryChainOp memory op = s.canonicalTxToSecondaryChainOp[_l2TxHash];
+        require(op.gateway != address(0), "tsc");
+
+        // Send l2 tx hash to secondary chain by gateway
+        bytes[] memory gatewayDataList = new bytes[](1);
+        bytes memory callData = abi.encodeCall(IZkLink.syncL2TxHash, (op.canonicalTxHash, _l2TxHash));
+        gatewayDataList[0] = abi.encode(op.gateway, 0, callData);
+        // Forward fee to gateway
+        s.gateway.sendMessage{value: msg.value}(0, abi.encode(gatewayDataList));
+        emit SyncL2TxHash(_l2TxHash);
+    }
+
     /// @notice Derives the price for L2 gas in base token to be paid.
     /// @param _l1GasPrice The gas price on L1
     /// @param _gasPerPubdata The price for each pubdata byte in L2 gas
@@ -202,6 +327,14 @@ contract MailboxFacet is ZkSyncHyperchainBase, IMailbox {
         });
     }
 
+    /// @inheritdoc IMailbox
+    function increaseSecondaryChainTotalPendingWithdraw(
+        address _secondaryChainGateway,
+        uint256 _amount
+    ) external onlyBaseTokenBridge {
+        s.secondaryChains[_secondaryChainGateway].totalPendingWithdraw += _amount;
+    }
+
     ///  @inheritdoc IMailbox
     function requestL2Transaction(
         address _contractL2,
@@ -231,6 +364,82 @@ contract MailboxFacet is ZkSyncHyperchainBase, IMailbox {
             msg.sender,
             ETH_TOKEN_ADDRESS,
             msg.value
+        );
+    }
+
+    /// @inheritdoc IMailbox
+    function forwardRequestL2Transaction(
+        ForwardL2Request calldata _request
+    ) external payable nonReentrant onlyValidator returns (bytes32 canonicalTxHash) {
+        require(s.chainId == ERA_CHAIN_ID, "Mailbox: legacy interface only available for Era");
+        bytes32 secondaryChainCanonicalTxHash = hashForwardL2Request(_request);
+        {
+            SecondaryChain memory secondaryChain = s.secondaryChains[_request.gateway];
+            require(secondaryChain.valid, "fsc");
+            require(secondaryChain.totalPriorityTxs == _request.txId, "fst");
+
+            SecondaryChainSyncStatus memory syncStatus;
+            if (secondaryChain.totalPriorityTxs == 0) {
+                syncStatus.hash = secondaryChainCanonicalTxHash;
+                syncStatus.amount = _request.l2Value;
+            } else {
+                syncStatus = s.secondaryChainSyncStatus[_request.gateway][secondaryChain.totalPriorityTxs - 1];
+                syncStatus.hash = keccak256(abi.encodePacked(syncStatus.hash, secondaryChainCanonicalTxHash));
+                syncStatus.amount = syncStatus.amount + _request.l2Value;
+            }
+            s.secondaryChainSyncStatus[_request.gateway][secondaryChain.totalPriorityTxs] = syncStatus;
+            s.secondaryChains[_request.gateway].totalPriorityTxs = secondaryChain.totalPriorityTxs + 1;
+        }
+
+        // Here we manually assign fields for the struct to prevent "stack too deep" error
+        WritePriorityOpParams memory params;
+        params.txId = s.priorityQueue.getTotalPriorityTxs();
+        params.l2GasPrice = _deriveL2GasPrice(tx.gasprice, _request.l2GasPricePerPubdata);
+        params.expirationTimestamp = uint64(block.timestamp + PRIORITY_EXPIRATION); // Safe to cast
+
+        uint256 baseCost = params.l2GasPrice * _request.l2GasLimit;
+        // Checking that the user provided enough ether to pay for the transaction.
+        // Using a new scope to prevent "stack too deep" error
+        {
+            require(msg.value >= baseCost, "fmv"); // The `msg.value` doesn't cover the transaction cost
+            uint256 leftMsgValue = msg.value - baseCost;
+            if (leftMsgValue > 0) {
+                // solhint-disable-next-line avoid-low-level-calls
+                (bool success, ) = msg.sender.call{value: leftMsgValue}("");
+                require(success, "fse");
+            }
+        }
+        // If the `_refundRecipient` is a smart contract, we apply the L1 to L2 alias to prevent foot guns.
+        address refundRecipient = _request.refundRecipient;
+        if (refundRecipient.code.length > 0) {
+            refundRecipient = AddressAliasHelper.applyL1ToL2Alias(refundRecipient);
+        }
+        params.request = BridgehubL2TransactionRequest({
+            sender: _request.sender,
+            contractL2: _request.contractAddressL2,
+            mintValue: baseCost + _request.l2Value,
+            l2Value: _request.l2Value,
+            l2GasLimit: _request.l2GasLimit,
+            l2Calldata: _request.l2CallData,
+            l2GasPerPubdataByteLimit: _request.l2GasPricePerPubdata,
+            factoryDeps: _request.factoryDeps,
+            refundRecipient: refundRecipient
+        });
+
+        canonicalTxHash = _writePriorityOp(params);
+        s.canonicalTxToSecondaryChainOp[canonicalTxHash] = SecondaryChainOp(
+            _request.gateway,
+            _request.txId,
+            secondaryChainCanonicalTxHash
+        );
+        s.secondaryToCanonicalTxHash[secondaryChainCanonicalTxHash] = canonicalTxHash;
+
+        // Transfer eth to L1SharedBridge
+        IL1SharedBridge(s.baseTokenBridge).bridgehubDepositBaseToken{value: baseCost}(
+            s.chainId,
+            msg.sender,
+            ETH_TOKEN_ADDRESS,
+            baseCost
         );
     }
 
@@ -363,5 +572,26 @@ contract MailboxFacet is ZkSyncHyperchainBase, IMailbox {
                 mstore(add(hashedFactoryDeps, mul(add(i, 1), 32)), hashedBytecode)
             }
         }
+    }
+
+    function hashForwardL2Request(ForwardL2Request memory _request) internal pure returns (bytes32) {
+        return
+            keccak256(
+                // solhint-disable-next-line func-named-parameters
+                abi.encode(
+                    FORWARD_REQUEST_TYPE_HASH,
+                    _request.gateway,
+                    _request.isContractCall,
+                    _request.sender,
+                    _request.txId,
+                    _request.contractAddressL2,
+                    _request.l2Value,
+                    keccak256(_request.l2CallData),
+                    _request.l2GasLimit,
+                    _request.l2GasPricePerPubdata,
+                    keccak256(abi.encode(_request.factoryDeps)),
+                    _request.refundRecipient
+                )
+            );
     }
 }

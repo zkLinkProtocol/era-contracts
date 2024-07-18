@@ -173,6 +173,10 @@ interface IExecutor is IZkSyncHyperchainBase {
         ProofInput calldata _proof
     ) external;
 
+    /// @notice Check if all secondary ops were synced
+    /// @param _batchesData Data of the batches to be executed.
+    function isBatchesSynced(StoredBatchInfo[] calldata _batchesData) external view returns (bool);
+
     /// @notice The function called by the operator to finalize (execute) batches. It is responsible for:
     /// - Processing all pending operations (commpleting priority requests).
     /// - Finalizing this batch (i.e. allowing to withdraw funds from the system)

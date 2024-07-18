@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {ZkSyncHyperchainBase} from "./ZkSyncHyperchainBase.sol";
-import {PubdataPricingMode} from "../ZkSyncHyperchainStorage.sol";
+import {PubdataPricingMode, SecondaryChain, SecondaryChainSyncStatus, SecondaryChainOp} from "../ZkSyncHyperchainStorage.sol";
 import {VerifierParams} from "../../../state-transition/chain-interfaces/IVerifier.sol";
 import {Diamond} from "../../libraries/Diamond.sol";
 import {PriorityQueue, PriorityOperation} from "../../../state-transition/libraries/PriorityQueue.sol";
@@ -13,6 +13,7 @@ import {UncheckedMath} from "../../../common/libraries/UncheckedMath.sol";
 import {IGetters} from "../../chain-interfaces/IGetters.sol";
 import {ILegacyGetters} from "../../chain-interfaces/ILegacyGetters.sol";
 import {SemVer} from "../../../common/libraries/SemVer.sol";
+import {IL2Gateway} from "../../chain-interfaces/IL2Gateway.sol";
 
 // While formally the following import is not used, it is needed to inherit documentation from it
 import {IZkSyncHyperchainBase} from "../../chain-interfaces/IZkSyncHyperchainBase.sol";
@@ -30,6 +31,34 @@ contract GettersFacet is ZkSyncHyperchainBase, IGetters, ILegacyGetters {
     /*//////////////////////////////////////////////////////////////
                             CUSTOM GETTERS
     //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IGetters
+    function getGateway() external view returns (IL2Gateway) {
+        return s.gateway;
+    }
+
+    /// @inheritdoc IGetters
+    function getSecondaryChain(address gateway) external view returns (SecondaryChain memory) {
+        return s.secondaryChains[gateway];
+    }
+
+    /// @inheritdoc IGetters
+    function getSecondaryChainSyncStatus(
+        address gateway,
+        uint256 priorityOpId
+    ) external view returns (SecondaryChainSyncStatus memory) {
+        return s.secondaryChainSyncStatus[gateway][priorityOpId];
+    }
+
+    /// @inheritdoc IGetters
+    function getSecondaryChainOp(bytes32 canonicalTxHash) external view returns (SecondaryChainOp memory) {
+        return s.canonicalTxToSecondaryChainOp[canonicalTxHash];
+    }
+
+    /// @inheritdoc IGetters
+    function getCanonicalTxHash(bytes32 secondaryChainCanonicalTxHash) external view returns (bytes32) {
+        return s.secondaryToCanonicalTxHash[secondaryChainCanonicalTxHash];
+    }
 
     /// @inheritdoc IGetters
     function getVerifier() external view returns (address) {

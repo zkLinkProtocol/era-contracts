@@ -18,6 +18,12 @@ contract ZkSyncHyperchainBase is ReentrancyGuard {
         _;
     }
 
+    /// @notice Checks that the message sender is L2 gateway
+    modifier onlyGateway() {
+        require(msg.sender == address(s.gateway), "Hyperchain: not gateway");
+        _;
+    }
+
     /// @notice Checks if validator is active
     modifier onlyValidator() {
         require(s.validators[msg.sender], "Hyperchain: not validator");

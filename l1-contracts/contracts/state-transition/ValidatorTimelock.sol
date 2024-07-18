@@ -175,6 +175,27 @@ contract ValidatorTimelock is IExecutor, Ownable2Step {
         _propagateToZkSyncHyperchain(_chainId);
     }
 
+    /// @dev Make a call to the hyperchain diamond contract with the same calldata.
+    function isBatchesSynced(StoredBatchInfo[] calldata _batchesData) external view returns (bool) {
+        return _isBatchesSyncedInner(ERA_CHAIN_ID, _batchesData);
+    }
+
+    /// @dev Make a call to the hyperchain diamond contract with the same calldata.
+    function isBatchesSyncedSharedBridge(
+        uint256 _chainId,
+        StoredBatchInfo[] calldata _batchesData
+    ) external view returns (bool) {
+        return _isBatchesSyncedInner(_chainId, _batchesData);
+    }
+
+    function _isBatchesSyncedInner(
+        uint256 _chainId,
+        StoredBatchInfo[] calldata _batchesData
+    ) internal view returns (bool) {
+        address contractAddress = stateTransitionManager.getHyperchain(_chainId);
+        return IExecutor(contractAddress).isBatchesSynced(_batchesData);
+    }
+
     /// @dev Check that batches were committed at least X time ago and
     /// make a call to the hyperchain diamond contract with the same calldata.
     function executeBatches(StoredBatchInfo[] calldata _newBatchesData) external onlyValidator(ERA_CHAIN_ID) {

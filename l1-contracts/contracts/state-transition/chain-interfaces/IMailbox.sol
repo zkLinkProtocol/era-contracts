@@ -3,7 +3,7 @@
 pragma solidity 0.8.19;
 
 import {IZkSyncHyperchainBase} from "./IZkSyncHyperchainBase.sol";
-import {L2CanonicalTransaction, L2Log, L2Message, TxStatus, BridgehubL2TransactionRequest} from "../../common/Messaging.sol";
+import {L2CanonicalTransaction, L2Log, L2Message, TxStatus, BridgehubL2TransactionRequest, ForwardL2Request} from "../../common/Messaging.sol";
 
 /// @title The interface of the zkSync Mailbox contract that provides interfaces for L1 <-> L2 interaction.
 /// @author Matter Labs
@@ -67,6 +67,12 @@ interface IMailbox is IZkSyncHyperchainBase {
         bytes32[] calldata _merkleProof
     ) external;
 
+    /// @notice Increase the `totalPendingWithdraw` of secondary chain when finalize eth withdrawal
+    /// @dev Only called from L1SharedBridge
+    /// @param _secondaryChainGateway The secondary chain
+    /// @param _amount The eth withdraw amount
+    function increaseSecondaryChainTotalPendingWithdraw(address _secondaryChainGateway, uint256 _amount) external;
+
     /// @notice Request execution of L2 transaction from L1.
     /// @param _contractL2 The L2 receiver address
     /// @param _l2Value `msg.value` of L2 transaction
@@ -95,6 +101,13 @@ interface IMailbox is IZkSyncHyperchainBase {
         address _refundRecipient
     ) external payable returns (bytes32 canonicalTxHash);
 
+    /// @notice Request execution of L2 transaction from secondary chain.
+    /// @param _request L2 request
+    /// @return canonicalTxHash The hash of the requested L2 transaction. This hash can be used to follow the transaction status
+    function forwardRequestL2Transaction(
+        ForwardL2Request calldata _request
+    ) external payable returns (bytes32 canonicalTxHash);
+
     function bridgehubRequestL2Transaction(
         BridgehubL2TransactionRequest calldata _request
     ) external returns (bytes32 canonicalTxHash);
@@ -113,6 +126,35 @@ interface IMailbox is IZkSyncHyperchainBase {
     /// @notice transfer Eth to shared bridge as part of migration process
     function transferEthToSharedBridge() external;
 
+    /// @notice Receive eth from L1SharedBridge
+    function receiveEth() external payable;
+
+    /// @notice Receive sync status from secondary chain
+    /// @param _secondaryChainGateway The secondary chain gateway address
+    /// @param _newTotalSyncedPriorityTxs New sync point
+    /// @param _syncHash New sync hash
+    /// @param _forwardEthAmount The difference eth amount between two sync points
+    function syncL2Requests(
+        address _secondaryChainGateway,
+        uint256 _newTotalSyncedPriorityTxs,
+        bytes32 _syncHash,
+        uint256 _forwardEthAmount
+    ) external payable;
+
+    /// @notice Send the accumulative batch root hash to secondary chains
+    /// @param _secondaryChainGateways The secondary chains
+    /// @param _fromBatchNumber The batch number from
+    /// @param _toBatchNumber The batch number to
+    function syncRangeBatchRoot(
+        address[] calldata _secondaryChainGateways,
+        uint256 _fromBatchNumber,
+        uint256 _toBatchNumber
+    ) external payable;
+
+    /// @notice Send l2 tx hash to secondary chain
+    /// @param _l2TxHash The l2 tx hash
+    function syncL2TxHash(bytes32 _l2TxHash) external payable;
+
     /// @notice New priority request event. Emitted when a request is placed into the priority queue
     /// @param txId Serial number of the priority operation
     /// @param txHash keccak256 hash of encoded transaction representation
@@ -127,4 +169,40 @@ interface IMailbox is IZkSyncHyperchainBase {
         L2CanonicalTransaction transaction,
         bytes[] factoryDeps
     );
+
+    /// @notice Emitted when receive sync status from secondary chain.
+    /// @param secondaryChainGateway The secondary chain gateway
+    /// @param totalSyncedPriorityTxs New sync point
+    /// @param syncHash New sync hash
+    /// @param forwardEthAmount The difference eth amount between two sync points
+    event SyncL2Requests(
+        address secondaryChainGateway,
+        uint256 totalSyncedPriorityTxs,
+        bytes32 syncHash,
+        uint256 forwardEthAmount
+    );
+
+    /// @notice Emitted when send batch root to secondary chain.
+    /// @param secondaryChainGateway The secondary chain gateway
+    /// @param batchNumber The batch number
+    /// @param forwardEthAmount The eth forward to secondary chain
+    event SyncBatchRoot(address indexed secondaryChainGateway, uint256 batchNumber, uint256 forwardEthAmount);
+
+    /// @notice Emitted when send range batch root to secondary chains.
+    /// @param secondaryChainGateway The secondary chain gateway
+    /// @param fromBatchNumber The batch number from
+    /// @param toBatchNumber The batch number to
+    /// @param rangeBatchRootHash The range batch root hash
+    /// @param forwardEthAmount The eth forward to secondary chain
+    event SyncRangeBatchRoot(
+        address indexed secondaryChainGateway,
+        uint256 fromBatchNumber,
+        uint256 toBatchNumber,
+        bytes32 rangeBatchRootHash,
+        uint256 forwardEthAmount
+    );
+
+    /// @notice Emitted when send l2 tx hash to secondary chain.
+    /// @param l2TxHash The l2 tx hash
+    event SyncL2TxHash(bytes32 l2TxHash);
 }

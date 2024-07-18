@@ -16,7 +16,8 @@ interface IL1SharedBridge {
         address indexed from,
         address to,
         address l1Token,
-        uint256 amount
+        uint256 amount,
+        bool toMerge
     );
 
     event BridgehubDepositInitiated(
@@ -40,6 +41,8 @@ interface IL1SharedBridge {
         bytes32 indexed txDataHash,
         bytes32 indexed l2DepositTxHash
     );
+
+    event EraWithdrawETH(uint256 indexed chainId, uint256 amount);
 
     event WithdrawalFinalizedSharedBridge(
         uint256 indexed chainId,
@@ -68,7 +71,8 @@ interface IL1SharedBridge {
         uint256 _amount,
         uint256 _l2TxGasLimit,
         uint256 _l2TxGasPerPubdataByte,
-        address _refundRecipient
+        address _refundRecipient,
+        bool _toMerge
     ) external payable returns (bytes32 txHash);
 
     function claimFailedDepositLegacyErc20Bridge(
@@ -147,6 +151,8 @@ interface IL1SharedBridge {
         address _l1Token,
         uint256 _amount
     ) external payable;
+
+    function eraWithdrawETH(uint256 _chainId, uint256 _amount) external;
 
     function bridgehubConfirmL2Transaction(uint256 _chainId, bytes32 _txDataHash, bytes32 _txHash) external;
 

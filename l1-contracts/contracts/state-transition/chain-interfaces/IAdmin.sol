@@ -6,11 +6,20 @@ import {IZkSyncHyperchainBase} from "../chain-interfaces/IZkSyncHyperchainBase.s
 
 import {Diamond} from "../libraries/Diamond.sol";
 import {FeeParams, PubdataPricingMode} from "../chain-deps/ZkSyncHyperchainStorage.sol";
+import {IL2Gateway} from "./IL2Gateway.sol";
 
 /// @title The interface of the Admin Contract that controls access rights for contract management.
 /// @author Matter Labs
 /// @custom:security-contact security@matterlabs.dev
 interface IAdmin is IZkSyncHyperchainBase {
+    /// @notice Init gateway
+    /// @param _gateway The gateway on local chain
+    function setGateway(IL2Gateway _gateway) external;
+
+    /// @notice Update secondary chain status
+    /// @param _gateway The secondary chain gateway on local chain
+    /// @param _active Active flag
+    function setSecondaryChainGateway(address _gateway, bool _active) external;
     /// @notice Starts the transfer of admin rights. Only the current admin can propose a new pending one.
     /// @notice New admin can accept admin rights by calling `acceptAdmin` function.
     /// @param _newPendingAdmin Address of the new admin
@@ -63,6 +72,12 @@ interface IAdmin is IZkSyncHyperchainBase {
     /// @notice Unpause the functionality of all freezable facets & their selectors
     /// @dev Both the admin and the STM can unfreeze Diamond Proxy
     function unfreezeDiamond() external;
+
+    /// @notice Gateway init
+    event InitGateway(IL2Gateway gateway);
+
+    /// @notice SecondaryChain's status changed
+    event SecondaryChainStatusUpdate(address indexed gateway, bool isActive);
 
     /// @notice Porter availability status changes
     event IsPorterAvailableStatusUpdate(bool isPorterAvailable);

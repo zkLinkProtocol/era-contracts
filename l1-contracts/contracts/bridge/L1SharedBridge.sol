@@ -104,6 +104,12 @@ contract L1SharedBridge is IL1SharedBridge, ReentrancyGuard, Ownable2StepUpgrade
         _;
     }
 
+    /// @notice Checks that the message sender is the zkSync Era Diamond Proxy.
+    modifier onlyEra(uint256 _chainId) {
+        require((_chainId == ERA_CHAIN_ID && msg.sender == ERA_DIAMOND_PROXY), "L1SharedBridge: not era chain");
+        _;
+    }
+
     /// @notice Checks that the message sender is the legacy bridge.
     modifier onlyLegacyBridge() {
         require(msg.sender == address(legacyBridge), "ShB not legacy bridge");
@@ -236,6 +242,18 @@ contract L1SharedBridge is IL1SharedBridge, ReentrancyGuard, Ownable2StepUpgrade
         emit BridgehubDepositBaseTokenInitiated(_chainId, _prevMsgSender, _l1Token, _amount);
     }
 
+    /// @notice Allows era diamond proxy to withdraw eth.
+    function eraWithdrawETH(uint256 _chainId, uint256 _amount) external virtual onlyEra(_chainId) whenNotPaused {
+        if (!hyperbridgingEnabled[_chainId]) {
+            // Check that the chain has sufficient balance
+            require(chainBalance[_chainId][ETH_TOKEN_ADDRESS] >= _amount, "ShB not enough funds 2"); // not enough funds
+            chainBalance[_chainId][ETH_TOKEN_ADDRESS] -= _amount;
+        }
+
+        IMailbox(ERA_DIAMOND_PROXY).receiveEth{value: _amount}();
+        emit EraWithdrawETH(_chainId, _amount);
+    }
+
     /// @dev Transfers tokens from the depositor address to the smart contract address.
     /// @return The difference between the contract balance before and after the transferring of funds.
     function _depositFunds(address _from, IERC20 _token, uint256 _amount) internal returns (uint256) {
@@ -291,7 +309,13 @@ contract L1SharedBridge is IL1SharedBridge, ReentrancyGuard, Ownable2StepUpgrade
 
         {
             // Request the finalization of the deposit on the L2 side
-            bytes memory l2TxCalldata = _getDepositL2Calldata(_prevMsgSender, _l2Receiver, _l1Token, amount);
+            bytes memory l2TxCalldata = _getDepositL2Calldata({
+                _l1Sender: _prevMsgSender,
+                _l2Receiver: _l2Receiver,
+                _l1Token: _l1Token,
+                _amount: amount,
+                _toMerge: false
+            });
 
             request = L2TransactionRequestTwoBridgesInner({
                 magicValue: TWO_BRIDGES_MAGIC_VALUE,
@@ -335,10 +359,19 @@ contract L1SharedBridge is IL1SharedBridge, ReentrancyGuard, Ownable2StepUpgrade
         address _l1Sender,
         address _l2Receiver,
         address _l1Token,
-        uint256 _amount
+        uint256 _amount,
+        bool _toMerge
     ) internal view returns (bytes memory) {
         bytes memory gettersData = _getERC20Getters(_l1Token);
-        return abi.encodeCall(IL2Bridge.finalizeDeposit, (_l1Sender, _l2Receiver, _l1Token, _amount, gettersData));
+        if (_toMerge) {
+            return
+                abi.encodeCall(
+                    IL2Bridge.finalizeDepositToMerge,
+                    (_l1Sender, _l2Receiver, _l1Token, _amount, gettersData)
+                );
+        } else {
+            return abi.encodeCall(IL2Bridge.finalizeDeposit, (_l1Sender, _l2Receiver, _l1Token, _amount, gettersData));
+        }
     }
 
     /// @dev Receives and parses (name, symbol, decimals) from the token contract
@@ -566,6 +599,15 @@ contract L1SharedBridge is IL1SharedBridge, ReentrancyGuard, Ownable2StepUpgrade
         });
         (l1Receiver, l1Token, amount) = _checkWithdrawal(_chainId, messageParams, _message, _merkleProof);
 
+        {
+            bool withdrawETHToSecondaryChain = l1Token == ETH_TOKEN_ADDRESS &&
+                IGetters(ERA_DIAMOND_PROXY).getSecondaryChain(l1Receiver).valid;
+            if (withdrawETHToSecondaryChain) {
+                IMailbox(ERA_DIAMOND_PROXY).increaseSecondaryChainTotalPendingWithdraw(l1Receiver, amount);
+                return (l1Receiver, l1Token, amount);
+            }
+        }
+
         if (!hyperbridgingEnabled[_chainId]) {
             // Check that the chain has sufficient balance
             require(chainBalance[_chainId][l1Token] >= amount, "ShB not enough funds 2"); // not enough funds
@@ -669,6 +711,7 @@ contract L1SharedBridge is IL1SharedBridge, ReentrancyGuard, Ownable2StepUpgrade
     /// @param _l2TxGasLimit The L2 gas limit to be used in the corresponding L2 transaction
     /// @param _l2TxGasPerPubdataByte The gasPerPubdataByteLimit to be used in the corresponding L2 transaction
     /// @param _refundRecipient The address on L2 that will receive the refund for the transaction.
+    /// @param _toMerge Whether to receive a merge token on L2.
     /// @dev If the L2 deposit finalization transaction fails, the `_refundRecipient` will receive the `_l2Value`.
     /// Please note, the contract may change the refund recipient's address to eliminate sending funds to addresses
     /// out of control.
@@ -690,7 +733,8 @@ contract L1SharedBridge is IL1SharedBridge, ReentrancyGuard, Ownable2StepUpgrade
         uint256 _amount,
         uint256 _l2TxGasLimit,
         uint256 _l2TxGasPerPubdataByte,
-        address _refundRecipient
+        address _refundRecipient,
+        bool _toMerge
     ) external payable override onlyLegacyBridge nonReentrant whenNotPaused returns (bytes32 l2TxHash) {
         require(l2BridgeAddress[ERA_CHAIN_ID] != address(0), "ShB b. n dep");
         require(_l1Token != L1_WETH_TOKEN, "ShB: WETH deposit not supported 2");
@@ -700,7 +744,13 @@ contract L1SharedBridge is IL1SharedBridge, ReentrancyGuard, Ownable2StepUpgrade
             chainBalance[ERA_CHAIN_ID][_l1Token] += _amount;
         }
 
-        bytes memory l2TxCalldata = _getDepositL2Calldata(_prevMsgSender, _l2Receiver, _l1Token, _amount);
+        bytes memory l2TxCalldata = _getDepositL2Calldata({
+            _l1Sender: _prevMsgSender,
+            _l2Receiver: _l2Receiver,
+            _l1Token: _l1Token,
+            _amount: _amount,
+            _toMerge: _toMerge
+        });
 
         {
             // If the refund recipient is not specified, the refund will be sent to the sender of the transaction.
@@ -732,7 +782,8 @@ contract L1SharedBridge is IL1SharedBridge, ReentrancyGuard, Ownable2StepUpgrade
             from: _prevMsgSender,
             to: _l2Receiver,
             l1Token: _l1Token,
-            amount: _amount
+            amount: _amount,
+            toMerge: _toMerge
         });
     }
 

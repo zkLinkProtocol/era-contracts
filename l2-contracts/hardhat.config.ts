@@ -21,13 +21,27 @@ export default {
   solidity: {
     version: "0.8.20",
   },
-  defaultNetwork: "localhost",
+  defaultNetwork: process.env.CHAIN_ETH_NETWORK,
   networks: {
     localhost: {
       // era-test-node default url
       url: "http://127.0.0.1:8011",
       ethNetwork: "localhost",
       zksync: true,
+    },
+    zkLinkTestnet: {
+      url: "https://sepolia.rpc.zklink.io",
+      ethNetwork: "sepolia",
+      zksync: true,
+      // contract verification endpoint
+      verifyURL: "https://sepolia.explorer.zklink.io/contract_verification",
+    },
+    zkLinkMainnet: {
+      url: "https://rpc.zklink.io",
+      ethNetwork: "mainnet",
+      zksync: true,
+      // contract verification endpoint
+      verifyURL: "https://explorer.zklink.io/contract_verification",
     },
     zkSyncTestnet: {
       url: "https://zksync2-testnet.zksync.dev",

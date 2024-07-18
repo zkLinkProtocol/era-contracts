@@ -11,6 +11,7 @@ import {IStateTransitionManager} from "../../IStateTransitionManager.sol";
 
 // While formally the following import is not used, it is needed to inherit documentation from it
 import {IZkSyncHyperchainBase} from "../../chain-interfaces/IZkSyncHyperchainBase.sol";
+import {IL2Gateway} from "../../chain-interfaces/IL2Gateway.sol";
 
 /// @title Admin Contract controls access rights for contract management.
 /// @author Matter Labs
@@ -18,6 +19,22 @@ import {IZkSyncHyperchainBase} from "../../chain-interfaces/IZkSyncHyperchainBas
 contract AdminFacet is ZkSyncHyperchainBase, IAdmin {
     /// @inheritdoc IZkSyncHyperchainBase
     string public constant override getName = "AdminFacet";
+
+    /// @inheritdoc IAdmin
+    function setGateway(IL2Gateway _gateway) external onlyStateTransitionManager {
+        require(address(s.gateway) == address(0), "g9");
+        require(address(_gateway) != address(0), "ga");
+        s.gateway = _gateway;
+        emit InitGateway(_gateway);
+    }
+
+    /// @inheritdoc IAdmin
+    function setSecondaryChainGateway(address _gateway, bool _active) external onlyGateway {
+        if (s.secondaryChains[_gateway].valid != _active) {
+            s.secondaryChains[_gateway].valid = _active;
+            emit SecondaryChainStatusUpdate(_gateway, _active);
+        }
+    }
 
     /// @inheritdoc IAdmin
     function setPendingAdmin(address _newPendingAdmin) external onlyAdmin {

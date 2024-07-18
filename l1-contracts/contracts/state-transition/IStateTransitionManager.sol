@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {Diamond} from "./libraries/Diamond.sol";
 import {L2CanonicalTransaction} from "../common/Messaging.sol";
 import {FeeParams} from "./chain-deps/ZkSyncHyperchainStorage.sol";
+import {IL2Gateway} from "./chain-interfaces/IL2Gateway.sol";
 
 /// @notice Struct that holds all data needed for initializing STM Proxy.
 /// @dev We use struct instead of raw parameters in `initialize` function to prevent "Stack too deep" error
@@ -141,6 +142,8 @@ interface IStateTransitionManager {
     function setValidator(uint256 _chainId, address _validator, bool _active) external;
 
     function setPorterAvailability(uint256 _chainId, bool _zkPorterIsAvailable) external;
+
+    function setGateway(uint256 _chainId, IL2Gateway _gateway) external;
 
     function upgradeChainFromVersion(
         uint256 _chainId,

@@ -2,12 +2,18 @@
 import * as hardhat from "hardhat";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function verifyPromise(address: string, constructorArguments?: Array<any>, libraries?: object): Promise<any> {
+export function verifyPromise(address: string, constructorArguments?: Array<any>, libraries?: object): Promise<any> {
   return new Promise((resolve, reject) => {
     hardhat
       .run("verify:verify", { address, constructorArguments, libraries })
       .then(() => resolve(`Successfully verified ${address}`))
-      .catch((e) => reject(`Failed to verify ${address}\nError: ${e.message}`));
+      .catch((e) => {
+        if (e.message.includes("contract is already verified")) {
+          resolve(`Contract source code already verified: ${address}`);
+        } else {
+          reject(`Failed to verify ${address}\nError: ${e.message}`);
+        }
+      });
   });
 }
 
@@ -28,7 +34,12 @@ async function main() {
     promises.push(promise);
   }
 
-  promises.push(verifyPromise(process.env.CONTRACTS_L2_SHARED_BRIDGE_IMPL_ADDR, [process.env.CONTRACTS_ERA_CHAIN_ID]));
+  promises.push(
+    verifyPromise(process.env.CONTRACTS_L2_SHARED_BRIDGE_IMPL_ADDR, [
+      process.env.CONTRACTS_ERA_CHAIN_ID,
+      process.env.CONTRACTS_MERGE_TOKEN_PORTAL_ADDR,
+    ])
+  );
 
   const messages = await Promise.allSettled(promises);
   for (const message of messages) {

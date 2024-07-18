@@ -4,8 +4,9 @@ pragma solidity 0.8.19;
 
 import {PriorityOperation} from "../libraries/PriorityQueue.sol";
 import {VerifierParams} from "../chain-interfaces/IVerifier.sol";
-import {PubdataPricingMode} from "../chain-deps/ZkSyncHyperchainStorage.sol";
+import {PubdataPricingMode, SecondaryChain, SecondaryChainSyncStatus, SecondaryChainOp} from "../chain-deps/ZkSyncHyperchainStorage.sol";
 import {IZkSyncHyperchainBase} from "./IZkSyncHyperchainBase.sol";
+import {IL2Gateway} from "./IL2Gateway.sol";
 
 /// @title The interface of the Getters Contract that implements functions for getting contract state from outside the blockchain.
 /// @author Matter Labs
@@ -14,6 +15,24 @@ interface IGetters is IZkSyncHyperchainBase {
     /*//////////////////////////////////////////////////////////////
                             CUSTOM GETTERS
     //////////////////////////////////////////////////////////////*/
+
+    /// @return The gateway on local chain
+    function getGateway() external view returns (IL2Gateway);
+
+    /// @return The secondary chain status
+    function getSecondaryChain(address gateway) external view returns (SecondaryChain memory);
+
+    /// @return The secondary chain op sync status
+    function getSecondaryChainSyncStatus(
+        address gateway,
+        uint256 priorityOpId
+    ) external view returns (SecondaryChainSyncStatus memory);
+
+    /// @return The secondary chain op info bind with tx
+    function getSecondaryChainOp(bytes32 canonicalTxHash) external view returns (SecondaryChainOp memory);
+
+    /// @return Return the canonical tx hash bind with secondary chain tx
+    function getCanonicalTxHash(bytes32 secondaryChainCanonicalTxHash) external view returns (bytes32);
 
     /// @return The address of the verifier smart contract
     function getVerifier() external view returns (address);

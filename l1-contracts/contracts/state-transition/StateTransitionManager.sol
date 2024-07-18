@@ -11,6 +11,7 @@ import {IAdmin} from "./chain-interfaces/IAdmin.sol";
 import {IDefaultUpgrade} from "../upgrades/IDefaultUpgrade.sol";
 import {IDiamondInit} from "./chain-interfaces/IDiamondInit.sol";
 import {IExecutor} from "./chain-interfaces/IExecutor.sol";
+import {IL2Gateway} from "./chain-interfaces/IL2Gateway.sol";
 import {IStateTransitionManager, StateTransitionManagerInitializeData, ChainCreationParams} from "./IStateTransitionManager.sol";
 import {ISystemContext} from "./l2-deps/ISystemContext.sol";
 import {IZkSyncHyperchain} from "./chain-interfaces/IZkSyncHyperchain.sol";
@@ -301,6 +302,11 @@ contract StateTransitionManager is IStateTransitionManager, ReentrancyGuard, Own
     /// @dev setPorterAvailability for the specified chain
     function setPorterAvailability(uint256 _chainId, bool _zkPorterIsAvailable) external onlyOwner {
         IZkSyncHyperchain(hyperchainMap.get(_chainId)).setPorterAvailability(_zkPorterIsAvailable);
+    }
+
+    /// @dev setGateway for the specified chain
+    function setGateway(uint256 _chainId, IL2Gateway _gateway) external onlyOwner {
+        IZkSyncHyperchain(hyperchainMap.get(_chainId)).setGateway(_gateway);
     }
 
     /// registration

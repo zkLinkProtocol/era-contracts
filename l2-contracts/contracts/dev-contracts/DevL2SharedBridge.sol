@@ -5,11 +5,15 @@ pragma solidity 0.8.20;
 import {L2SharedBridge} from "../bridge/L2SharedBridge.sol";
 import {L2StandardERC20} from "../bridge/L2StandardERC20.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {IMergeTokenPortal} from "../bridge/interfaces/IMergeTokenPortal.sol";
 
 /// @author Matter Labs
 /// @notice The implementation of the shared bridge that allows setting legacy bridge. Must only be used in local testing environments.
 contract DevL2SharedBridge is L2SharedBridge {
-    constructor(uint256 _eraChainId) L2SharedBridge(_eraChainId) {}
+    constructor(
+        uint256 _eraChainId,
+        IMergeTokenPortal _mergeTokenPortal
+    ) L2SharedBridge(_eraChainId, _mergeTokenPortal) {}
 
     function initializeDevBridge(
         address _l1SharedBridge,

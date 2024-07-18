@@ -60,6 +60,14 @@ library PriorityQueue {
         _queue.tail = tail + 1;
     }
 
+    /// @return The unprocessed priority operation at the index `i` from the queue
+    function index(Queue storage _queue, uint256 i) internal view returns (PriorityOperation memory) {
+        uint256 offset = _queue.head + i;
+        require(offset < _queue.tail, "D"); // invalid index
+
+        return _queue.data[offset];
+    }
+
     /// @return The first unprocessed priority operation from the queue
     function front(Queue storage _queue) internal view returns (PriorityOperation memory) {
         require(!_queue.isEmpty(), "D"); // priority queue is empty

@@ -9,7 +9,7 @@ import {PriorityQueue, PriorityOperation} from "../../libraries/PriorityQueue.so
 import {UncheckedMath} from "../../../common/libraries/UncheckedMath.sol";
 import {UnsafeBytes} from "../../../common/libraries/UnsafeBytes.sol";
 import {L2_BOOTLOADER_ADDRESS, L2_TO_L1_MESSENGER_SYSTEM_CONTRACT_ADDR, L2_SYSTEM_CONTEXT_SYSTEM_CONTRACT_ADDR, L2_PUBDATA_CHUNK_PUBLISHER_ADDR} from "../../../common/L2ContractAddresses.sol";
-import {PubdataPricingMode} from "../ZkSyncHyperchainStorage.sol";
+import {PubdataPricingMode, SecondaryChainOp, SecondaryChain} from "../ZkSyncHyperchainStorage.sol";
 import {IStateTransitionManager} from "../../IStateTransitionManager.sol";
 
 // While formally the following import is not used, it is needed to inherit documentation from it
@@ -327,6 +327,12 @@ contract ExecutorFacet is ZkSyncHyperchainBase, IExecutor {
 
         for (uint256 i = 0; i < _nPriorityOps; i = i.uncheckedInc()) {
             PriorityOperation memory priorityOp = s.priorityQueue.popFront();
+            SecondaryChainOp memory secondaryChainOp = s.canonicalTxToSecondaryChainOp[priorityOp.canonicalTxHash];
+            if (secondaryChainOp.gateway != address(0)) {
+                // priority op of secondary chain should be synced
+                SecondaryChain memory secondaryChain = s.secondaryChains[secondaryChainOp.gateway];
+                require(secondaryChain.totalSyncedPriorityTxs > secondaryChainOp.priorityOpId, "ccc");
+            }
             concatHash = keccak256(abi.encode(concatHash, priorityOp.canonicalTxHash));
         }
     }
@@ -356,6 +362,27 @@ contract ExecutorFacet is ZkSyncHyperchainBase, IExecutor {
         StoredBatchInfo[] calldata _batchesData
     ) external nonReentrant onlyValidator {
         _executeBatches(_batchesData);
+    }
+
+    /// @inheritdoc IExecutor
+    function isBatchesSynced(StoredBatchInfo[] calldata _batchesData) external view returns (bool) {
+        uint256 nBatches = _batchesData.length;
+        uint256 opIndex = 0;
+        for (uint256 i = 0; i < nBatches; i = i.uncheckedInc()) {
+            StoredBatchInfo memory _storedBatch = _batchesData[i];
+            for (uint256 j = 0; j < _storedBatch.numberOfLayer1Txs; j = j.uncheckedInc()) {
+                PriorityOperation memory priorityOp = s.priorityQueue.index(opIndex);
+                SecondaryChainOp memory secondaryChainOp = s.canonicalTxToSecondaryChainOp[priorityOp.canonicalTxHash];
+                if (secondaryChainOp.gateway != address(0)) {
+                    SecondaryChain memory secondaryChain = s.secondaryChains[secondaryChainOp.gateway];
+                    if (secondaryChain.totalSyncedPriorityTxs <= secondaryChainOp.priorityOpId) {
+                        return false;
+                    }
+                }
+                opIndex = opIndex.uncheckedInc();
+            }
+        }
+        return true;
     }
 
     /// @inheritdoc IExecutor
@@ -664,10 +691,10 @@ contract ExecutorFacet is ZkSyncHyperchainBase, IExecutor {
         }
     }
 
-    function _getBlobVersionedHash(uint256 _index) internal view virtual returns (bytes32 versionedHash) {
-//        assembly {
-//            versionedHash := blobhash(_index)
-//        }
+    function _getBlobVersionedHash(uint256) internal view virtual returns (bytes32 versionedHash) {
+        //        assembly {
+        //            versionedHash := blobhash(_index)
+        //        }
         revert("blob not support");
     }
 }

@@ -4,6 +4,8 @@ import { computeL2Create2Address, create2DeployFromL1, priorityTxMaxGasLimit, pr
 import { ethTestConfig } from "./deploy-utils";
 
 import * as hre from "hardhat";
+import { formatUnits, parseUnits } from "ethers/lib/utils";
+import { GAS_MULTIPLIER } from "../../l1-contracts/scripts/utils";
 
 // Script to deploy the testnet paymaster and output its address.
 // Note, that this script expects that the L2 contracts have been compiled PRIOR
@@ -19,6 +21,7 @@ async function main() {
   program
     .option("--private-key <private-key>")
     .option("--chain-id <chain-id>")
+    .option("--gas-price <gas-price>")
     .action(async (cmd) => {
       const chainId: string = cmd.chainId ? cmd.chainId : process.env.CHAIN_ETH_ZKSYNC_NETWORK_ID;
       const deployWallet = cmd.privateKey
@@ -28,6 +31,11 @@ async function main() {
             "m/44'/60'/0'/0/1"
           ).connect(provider);
       console.log(`Using deployer wallet: ${deployWallet.address}`);
+
+      const gasPrice = cmd.gasPrice
+        ? parseUnits(cmd.gasPrice, "gwei")
+        : (await provider.getGasPrice()).mul(GAS_MULTIPLIER);
+      console.log(`Using gas price: ${formatUnits(gasPrice, "gwei")} gwei`);
 
       const testnetPaymasterBytecode = hre.artifacts.readArtifactSync("TestnetPaymaster").bytecode;
       const create2Salt = ethers.constants.HashZero;
@@ -41,7 +49,8 @@ async function main() {
           testnetPaymasterBytecode,
           "0x",
           create2Salt,
-          priorityTxMaxGasLimit
+          priorityTxMaxGasLimit,
+          gasPrice
         )
       ).wait();
 

@@ -1,11 +1,11 @@
 // hardhat import should be the first import in the file
 import * as hardhat from "hardhat";
 import { deployedAddressesFromEnv } from "../src.ts/deploy-utils";
-import { ethTestConfig, getNumberFromEnv, getHashFromEnv, getAddressFromEnv } from "../src.ts/utils";
+import { getNumberFromEnv, getHashFromEnv, getAddressFromEnv } from "../src.ts/utils";
 
 import { Interface } from "ethers/lib/utils";
 import { Deployer } from "../src.ts/deploy";
-import { Wallet } from "ethers";
+import { ethers, Wallet } from "ethers";
 import { packSemver, unpackStringSemVer, web3Provider } from "./utils";
 import { getTokens } from "../src.ts/deploy-token";
 
@@ -42,12 +42,14 @@ async function main() {
     console.log("Skip contract verification given etherscan api key is missing");
     return;
   }
+  if (!process.env.DEPLOYER_PRIVATE_KEY) {
+    console.log("Skip contract verification deployer private key is missing");
+    return;
+  }
   const addresses = deployedAddressesFromEnv();
-  const promises = [];
 
-  const deployWalletAddress = "0x71d84c3404a6ae258E6471d4934B96a2033F9438";
-
-  const deployWallet = Wallet.fromMnemonic(ethTestConfig.mnemonic, "m/44'/60'/0'/0/1").connect(provider);
+  const deployWallet = new Wallet(process.env.DEPLOYER_PRIVATE_KEY, provider);
+  const deployWalletAddress = await deployWallet.getAddress();
   const deployer = new Deployer({
     deployWallet,
     addresses: deployedAddressesFromEnv(),
@@ -71,36 +73,30 @@ async function main() {
   //     promises.push(promise);
   // }
 
-  const promise1 = verifyPromise(addresses.StateTransition.GenesisUpgrade);
-  promises.push(promise1);
-
   const executionDelay = getNumberFromEnv("CONTRACTS_VALIDATOR_TIMELOCK_EXECUTION_DELAY");
   const eraChainId = getNumberFromEnv("CONTRACTS_ERA_CHAIN_ID");
-  const promise2 = verifyPromise(addresses.ValidatorTimeLock, [deployWalletAddress, executionDelay, eraChainId]);
-  promises.push(promise2);
+  await verifyPromise(addresses.ValidatorTimeLock, [deployWalletAddress, executionDelay, eraChainId]);
 
-  const promise3 = verifyPromise(process.env.CONTRACTS_DEFAULT_UPGRADE_ADDR);
-  promises.push(promise3);
+  await verifyPromise(addresses.Governance, [deployWalletAddress, ethers.constants.AddressZero, 0]);
 
-  const promise4 = verifyPromise(process.env.CONTRACTS_HYPERCHAIN_UPGRADE_ADDR);
-  promises.push(promise4);
+  await verifyPromise(addresses.ChainAdmin, [deployWalletAddress]);
 
-  const promise5 = verifyPromise(addresses.TransparentProxyAdmin);
-  promises.push(promise5);
+  if (process.env.CONTRACTS_HYPERCHAIN_UPGRADE_ADDR) {
+    await verifyPromise(process.env.CONTRACTS_HYPERCHAIN_UPGRADE_ADDR);
+  }
+
+  await verifyPromise(addresses.TransparentProxyAdmin);
 
   // bridgehub
 
-  const promise6 = verifyPromise(addresses.Bridgehub.BridgehubImplementation);
-  promises.push(promise6);
-
+  await verifyPromise(addresses.Bridgehub.BridgehubImplementation);
   const bridgehub = new Interface(hardhat.artifacts.readArtifactSync("Bridgehub").abi);
   const initCalldata1 = bridgehub.encodeFunctionData("initialize", [deployWalletAddress]);
-  const promise7 = verifyPromise(addresses.Bridgehub.BridgehubProxy, [
+  await verifyPromise(addresses.Bridgehub.BridgehubProxy, [
     addresses.Bridgehub.BridgehubImplementation,
     addresses.TransparentProxyAdmin,
     initCalldata1,
   ]);
-  promises.push(promise7);
 
   // stm
 
@@ -111,19 +107,23 @@ async function main() {
     addresses.StateTransition.AdminFacet,
     addresses.StateTransition.ExecutorFacet,
     addresses.StateTransition.Verifier,
+    addresses.StateTransition.GenesisUpgrade,
+    addresses.StateTransition.DefaultUpgrade,
   ]) {
-    const promise = verifyPromise(address);
-    promises.push(promise);
+    await verifyPromise(address);
   }
+  const chainId = process.env.ETH_CLIENT_CHAIN_ID;
+  await verifyPromise(addresses.StateTransition.DiamondProxy, [
+    chainId,
+    await deployer.initialZkSyncHyperchainDiamondCut(),
+  ]);
 
-  const promise = verifyPromise(addresses.StateTransition.MailboxFacet, [eraChainId]);
-  promises.push(promise);
+  await verifyPromise(addresses.StateTransition.MailboxFacet, [eraChainId]);
 
-  const promise8 = verifyPromise(addresses.StateTransition.StateTransitionImplementation, [
+  await verifyPromise(addresses.StateTransition.StateTransitionImplementation, [
     addresses.Bridgehub.BridgehubProxy,
     getNumberFromEnv("CONTRACTS_MAX_NUMBER_OF_HYPERCHAINS"),
   ]);
-  promises.push(promise8);
 
   const stateTransitionManager = new Interface(hardhat.artifacts.readArtifactSync("StateTransitionManager").abi);
   const genesisBatchHash = getHashFromEnv("CONTRACTS_GENESIS_ROOT"); // TODO: confusing name
@@ -147,48 +147,48 @@ async function main() {
     },
   ]);
 
-  const promise9 = verifyPromise(addresses.StateTransition.StateTransitionProxy, [
+  await verifyPromise(addresses.StateTransition.StateTransitionProxy, [
     addresses.StateTransition.StateTransitionImplementation,
     addresses.TransparentProxyAdmin,
     initCalldata2,
   ]);
-  promises.push(promise9);
 
   // bridges
-  const promise10 = verifyPromise(
+  await verifyPromise(
     addresses.Bridges.ERC20BridgeImplementation,
     [addresses.Bridges.SharedBridgeProxy],
     undefined,
     "contracts/bridge/L1ERC20Bridge.sol:L1ERC20Bridge"
   );
-  promises.push(promise10);
+  const initCalldata3 = new Interface(hardhat.artifacts.readArtifactSync("L1ERC20Bridge").abi).encodeFunctionData(
+    "initialize",
+    []
+  );
+  await verifyPromise(addresses.Bridges.ERC20BridgeProxy, [
+    addresses.Bridges.ERC20BridgeImplementation,
+    addresses.TransparentProxyAdmin,
+    initCalldata3,
+  ]);
 
   const eraDiamondProxy = getAddressFromEnv("CONTRACTS_ERA_DIAMOND_PROXY_ADDR");
   const tokens = getTokens();
   const l1WethToken = tokens.find((token: { symbol: string }) => token.symbol == "WETH")!.address;
 
-  const promise12 = verifyPromise(addresses.Bridges.SharedBridgeImplementation, [
+  await verifyPromise(addresses.Bridges.SharedBridgeImplementation, [
     l1WethToken,
     addresses.Bridgehub.BridgehubProxy,
     eraChainId,
     eraDiamondProxy,
   ]);
-  promises.push(promise12);
   const initCalldata4 = new Interface(hardhat.artifacts.readArtifactSync("L1SharedBridge").abi).encodeFunctionData(
     "initialize",
     [deployWalletAddress]
   );
-  const promise13 = verifyPromise(addresses.Bridges.SharedBridgeProxy, [
+  await verifyPromise(addresses.Bridges.SharedBridgeProxy, [
     addresses.Bridges.SharedBridgeImplementation,
     addresses.TransparentProxyAdmin,
     initCalldata4,
   ]);
-  promises.push(promise13);
-
-  const messages = await Promise.allSettled(promises);
-  for (const message of messages) {
-    console.log(message.status == "fulfilled" ? message.value : message.reason);
-  }
 }
 
 main()

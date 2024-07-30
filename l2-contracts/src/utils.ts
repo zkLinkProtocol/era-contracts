@@ -123,7 +123,7 @@ export async function create2DeployFromL1(
   const ethIsBaseToken = ADDRESS_ONE == baseTokenAddress;
 
   if (!ethIsBaseToken) {
-    const tx = await baseToken.approve(baseTokenBridge, expectedCost);
+    const tx = await baseToken.approve(baseTokenBridge, expectedCost, { gasPrice });
     await tx.wait();
   }
   const factoryDeps = extraFactoryDeps ? [bytecode, ...extraFactoryDeps] : [bytecode];
@@ -167,7 +167,8 @@ export async function publishBytecodeFromL1(
 
     const approveTx = await erc20.approve(
       deployedAddresses.Bridges.SharedBridgeProxy,
-      requiredValueToPublishBytecodes.add(requiredValueToPublishBytecodes)
+      requiredValueToPublishBytecodes.add(requiredValueToPublishBytecodes),
+      { gasPrice }
     );
     await approveTx.wait(1);
   }

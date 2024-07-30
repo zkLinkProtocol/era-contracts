@@ -59,6 +59,7 @@ export async function deploySharedBridgeImplOnL2ThroughL1(
     console.log("Deploying L2SharedBridge Implementation");
   }
   const eraChainId = process.env.CONTRACTS_ERA_CHAIN_ID;
+  const mergeTokenPortalAddr = process.env.CONTRACTS_MERGE_TOKEN_PORTAL_ADDR;
 
   const l2SharedBridgeImplementationBytecode = localLegacyBridgeTesting
     ? hre.artifacts.readArtifactSync("DevL2SharedBridge").bytecode
@@ -75,7 +76,7 @@ export async function deploySharedBridgeImplOnL2ThroughL1(
   const l2SharedBridgeImplAddress = computeL2Create2Address(
     deployer.deployWallet,
     l2SharedBridgeImplementationBytecode,
-    defaultAbiCoder.encode(["uint256"], [eraChainId]),
+    defaultAbiCoder.encode(["uint256", "address"], [eraChainId, mergeTokenPortalAddr]),
     ethers.constants.HashZero
   );
   deployer.addresses.Bridges.L2SharedBridgeImplementation = l2SharedBridgeImplAddress;
@@ -93,7 +94,7 @@ export async function deploySharedBridgeImplOnL2ThroughL1(
     chainId,
     deployer.deployWallet,
     l2SharedBridgeImplementationBytecode,
-    defaultAbiCoder.encode(["uint256"], [eraChainId]),
+    defaultAbiCoder.encode(["uint256", "address"], [eraChainId, mergeTokenPortalAddr]),
     ethers.constants.HashZero,
     priorityTxMaxGasLimit,
     gasPrice,
@@ -176,7 +177,7 @@ export async function deploySharedBridgeProxyOnL2ThroughL1(
   }
 }
 
-export async function initializeChainGovernance(deployer: Deployer, chainId: string) {
+export async function initializeChainGovernance(deployer: Deployer, chainId: string, gasPrice: BigNumberish) {
   const l1SharedBridge = deployer.defaultSharedBridge(deployer.deployWallet);
 
   if (deployer.verbose) {
@@ -188,7 +189,8 @@ export async function initializeChainGovernance(deployer: Deployer, chainId: str
     l1SharedBridge.interface.encodeFunctionData("initializeChainGovernance", [
       chainId,
       deployer.addresses.Bridges.L2SharedBridgeProxy,
-    ])
+    ]),
+    gasPrice
   );
 
   if (deployer.verbose) {
@@ -207,7 +209,7 @@ export async function deploySharedBridgeOnL2ThroughL1(
   await deploySharedBridgeImplOnL2ThroughL1(deployer, chainId, gasPrice, localLegacyBridgeTesting);
   await deploySharedBridgeProxyOnL2ThroughL1(deployer, chainId, gasPrice, localLegacyBridgeTesting);
   if (!skipInitializeChainGovernance) {
-    await initializeChainGovernance(deployer, chainId);
+    await initializeChainGovernance(deployer, chainId, gasPrice);
   }
 }
 

@@ -38,7 +38,7 @@ import type { FacetCut } from "./diamondCut";
 import { getCurrentFacetCutsForAdd } from "./diamondCut";
 
 import { ChainAdminFactory, ERC20Factory } from "../typechain";
-import type { Contract, Overrides } from "@ethersproject/contracts";
+import type { Contract } from "@ethersproject/contracts";
 
 let L2_BOOTLOADER_BYTECODE_HASH: string;
 let L2_DEFAULT_ACCOUNT_BYTECODE_HASH: string;
@@ -234,7 +234,7 @@ export class Deployer {
 
     this.addresses.TransparentProxyAdmin = proxyAdmin.address;
 
-    const tx = await proxyAdmin.transferOwnership(this.addresses.Governance);
+    const tx = await proxyAdmin.transferOwnership(this.addresses.Governance, { gasPrice: ethTxOptions.gasPrice });
     const receipt = await tx.wait();
 
     if (this.verbose) {
@@ -387,7 +387,7 @@ export class Deployer {
 
     let contractAddress: string;
 
-    if (process.env.CHAIN_ETH_NETWORK === "mainnet") {
+    if (process.env.CHAIN_ETH_NETWORK === "mainnet" || process.env.CHAIN_ETH_NETWORK === "linea") {
       contractAddress = await this.deployViaCreate2("Verifier", [], create2Salt, ethTxOptions);
     } else {
       contractAddress = await this.deployViaCreate2("TestnetVerifier", [], create2Salt, ethTxOptions);
@@ -420,7 +420,7 @@ export class Deployer {
     this.addresses.Bridges.ERC20BridgeImplementation = contractAddress;
   }
 
-  public async setParametersSharedBridge() {
+  public async setParametersSharedBridge(gasPrice?: BigNumberish) {
     const sharedBridge = L1SharedBridgeFactory.connect(this.addresses.Bridges.SharedBridgeProxy, this.deployWallet);
     const data1 = sharedBridge.interface.encodeFunctionData("setL1Erc20Bridge", [
       this.addresses.Bridges.ERC20BridgeProxy,
@@ -435,10 +435,10 @@ export class Deployer {
       process.env.CONTRACTS_ERA_LEGACY_UPGRADE_LAST_DEPOSIT_BATCH ?? 1,
       process.env.CONTRACTS_ERA_LEGACY_UPGRADE_LAST_DEPOSIT_TX_NUMBER ?? 0,
     ]);
-    await this.executeUpgrade(this.addresses.Bridges.SharedBridgeProxy, 0, data1);
-    await this.executeUpgrade(this.addresses.Bridges.SharedBridgeProxy, 0, data2);
-    await this.executeUpgrade(this.addresses.Bridges.SharedBridgeProxy, 0, data3);
-    await this.executeUpgrade(this.addresses.Bridges.SharedBridgeProxy, 0, data4);
+    await this.executeUpgrade(this.addresses.Bridges.SharedBridgeProxy, 0, data1, gasPrice);
+    await this.executeUpgrade(this.addresses.Bridges.SharedBridgeProxy, 0, data2, gasPrice);
+    await this.executeUpgrade(this.addresses.Bridges.SharedBridgeProxy, 0, data3, gasPrice);
+    await this.executeUpgrade(this.addresses.Bridges.SharedBridgeProxy, 0, data4, gasPrice);
     if (this.verbose) {
       console.log("Shared bridge updated with ERC20Bridge address");
     }
@@ -451,12 +451,12 @@ export class Deployer {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fargs: any[],
     value: BigNumberish,
-    overrides?: Overrides,
+    overrides?: ethers.providers.TransactionRequest,
     printOperation: boolean = false
   ): Promise<ethers.ContractReceipt> {
     if (useGovernance) {
       const cdata = contract.interface.encodeFunctionData(fname, fargs);
-      return this.executeUpgrade(contract.address, value, cdata, printOperation);
+      return this.executeUpgrade(contract.address, value, cdata, overrides?.gasPrice, printOperation);
     } else {
       const tx: ethers.ContractTransaction = await contract[fname](...fargs, ...(overrides ? [overrides] : []));
       return await tx.wait();
@@ -468,6 +468,7 @@ export class Deployer {
     targetAddress: string,
     value: BigNumberish,
     callData: string,
+    gasPrice?: BigNumberish,
     printOperation: boolean = false
   ) {
     const governance = IGovernanceFactory.connect(this.addresses.Governance, this.deployWallet);
@@ -488,12 +489,12 @@ export class Deployer {
       );
       return;
     }
-    const scheduleTx = await governance.scheduleTransparent(operation, 0);
+    const scheduleTx = await governance.scheduleTransparent(operation, 0, { gasPrice: gasPrice });
     await scheduleTx.wait();
     if (this.verbose) {
       console.log("Upgrade scheduled");
     }
-    const executeTX = await governance.execute(operation, { value: value });
+    const executeTX = await governance.execute(operation, { value: value, gasPrice: gasPrice });
     const receipt = await executeTX.wait();
     if (this.verbose) {
       console.log(
@@ -571,10 +572,9 @@ export class Deployer {
   }
 
   public async sharedBridgeSetEraPostUpgradeFirstBatch(ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
     const sharedBridge = L1SharedBridgeFactory.connect(this.addresses.Bridges.SharedBridgeProxy, this.deployWallet);
     const storageSwitch = getNumberFromEnv("CONTRACTS_SHARED_BRIDGE_UPGRADE_STORAGE_SWITCH");
-    const tx = await sharedBridge.setEraPostUpgradeFirstBatch(storageSwitch);
+    const tx = await sharedBridge.setEraPostUpgradeFirstBatch(storageSwitch, { gasPrice: ethTxOptions.gasPrice });
     const receipt = await tx.wait();
     if (this.verbose) {
       console.log(`Era first post upgrade batch set, gas used: ${receipt.gasUsed.toString()}`);
@@ -582,14 +582,15 @@ export class Deployer {
   }
 
   public async registerSharedBridge(ethTxOptions: ethers.providers.TransactionRequest) {
-    ethTxOptions.gasLimit ??= 10_000_000;
     const bridgehub = this.bridgehubContract(this.deployWallet);
 
     /// registering ETH as a valid token, with address 1.
-    const tx2 = await bridgehub.addToken(ADDRESS_ONE);
+    const tx2 = await bridgehub.addToken(ADDRESS_ONE, { gasPrice: ethTxOptions.gasPrice });
     const receipt2 = await tx2.wait();
 
-    const tx3 = await bridgehub.setSharedBridge(this.addresses.Bridges.SharedBridgeProxy);
+    const tx3 = await bridgehub.setSharedBridge(this.addresses.Bridges.SharedBridgeProxy, {
+      gasPrice: ethTxOptions.gasPrice,
+    });
     const receipt3 = await tx3.wait();
     if (this.verbose) {
       console.log(
@@ -663,7 +664,7 @@ export class Deployer {
     await this.deployStateTransitionDiamondFacets(create2Salt, gasPrice, nonce);
     await this.deployStateTransitionManagerImplementation(create2Salt, { gasPrice });
     await this.deployStateTransitionManagerProxy(create2Salt, { gasPrice }, extraFacets);
-    await this.registerStateTransitionManager();
+    await this.registerStateTransitionManager({ gasPrice });
   }
 
   public async deployStateTransitionDiamondFacets(create2Salt: string, gasPrice?: BigNumberish, nonce?) {
@@ -676,11 +677,14 @@ export class Deployer {
     await this.deployStateTransitionDiamondInit(create2Salt, { gasPrice, nonce: nonce + 4 });
   }
 
-  public async registerStateTransitionManager() {
+  public async registerStateTransitionManager(ethTxOptions: ethers.providers.TransactionRequest) {
     const bridgehub = this.bridgehubContract(this.deployWallet);
 
     if (!(await bridgehub.stateTransitionManagerIsRegistered(this.addresses.StateTransition.StateTransitionProxy))) {
-      const tx = await bridgehub.addStateTransitionManager(this.addresses.StateTransition.StateTransitionProxy);
+      const tx = await bridgehub.addStateTransitionManager(
+        this.addresses.StateTransition.StateTransitionProxy,
+        ethTxOptions
+      );
 
       const receipt = await tx.wait();
       if (this.verbose) {
@@ -768,7 +772,6 @@ export class Deployer {
     const txRegisterValidator = await validatorTimelock.addValidator(chainId, validatorOneAddress, {
       gasPrice,
       nonce,
-      gasLimit,
     });
     const receiptRegisterValidator = await txRegisterValidator.wait();
     if (this.verbose) {
@@ -784,7 +787,6 @@ export class Deployer {
     const tx3 = await validatorTimelock.addValidator(chainId, validatorTwoAddress, {
       gasPrice,
       nonce,
-      gasLimit,
     });
     const receipt3 = await tx3.wait();
     if (this.verbose) {
@@ -792,14 +794,14 @@ export class Deployer {
     }
 
     const diamondProxy = this.stateTransitionContract(this.deployWallet);
-    const tx4 = await diamondProxy.setTokenMultiplier(1, 1);
+    const tx4 = await diamondProxy.setTokenMultiplier(1, 1, { gasPrice });
     const receipt4 = await tx4.wait();
     if (this.verbose) {
       console.log(`BaseTokenMultiplier set, gas used: ${receipt4.gasUsed.toString()}`);
     }
 
     if (validiumMode) {
-      const tx5 = await diamondProxy.setPubdataPricingMode(PubdataPricingMode.Validium);
+      const tx5 = await diamondProxy.setPubdataPricingMode(PubdataPricingMode.Validium, { gasPrice });
       const receipt5 = await tx5.wait();
       if (this.verbose) {
         console.log(`Validium mode set, gas used: ${receipt5.gasUsed.toString()}`);
@@ -807,12 +809,12 @@ export class Deployer {
     }
   }
 
-  public async transferAdminFromDeployerToChainAdmin() {
+  public async transferAdminFromDeployerToChainAdmin(gasPrice?: BigNumberish) {
     const stm = this.stateTransitionManagerContract(this.deployWallet);
     const diamondProxyAddress = await stm.getHyperchain(this.chainId);
     const hyperchain = IZkSyncHyperchainFactory.connect(diamondProxyAddress, this.deployWallet);
 
-    const receipt = await (await hyperchain.setPendingAdmin(this.addresses.ChainAdmin)).wait();
+    const receipt = await (await hyperchain.setPendingAdmin(this.addresses.ChainAdmin, { gasPrice })).wait();
     if (this.verbose) {
       console.log(`ChainAdmin set as pending admin, gas used: ${receipt.gasUsed.toString()}`);
     }
@@ -827,7 +829,8 @@ export class Deployer {
           data: acceptAdminData,
         },
       ],
-      true
+      true,
+      { gasPrice }
     );
     await multicallTx.wait();
 
@@ -898,7 +901,7 @@ export class Deployer {
   ) {
     ethTxOptions.gasLimit ??= 10_000_000;
     // solc contracts/zksync/utils/blobVersionedHashRetriever.yul --strict-assembly --bin
-    const bytecode = "0x600b600b5f39600b5ff3fe5f358049805f5260205ff3";
+    const bytecode = "0x600c80600c6000396000f3fe6000354960005260206000f3";
 
     const contractAddress = await this.deployBytecodeViaCreate2(
       "BlobVersionedHashRetriever",

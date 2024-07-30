@@ -21,48 +21,13 @@ export default {
   solidity: {
     version: "0.8.20",
   },
-  defaultNetwork: process.env.CHAIN_ETH_NETWORK,
+  defaultNetwork: "env",
   networks: {
-    localhost: {
-      // era-test-node default url
-      url: "http://127.0.0.1:8011",
-      ethNetwork: "localhost",
+    env: {
+      url: process.env.API_WEB3_JSON_RPC_HTTP_URL,
+      ethNetwork: process.env.ETH_CLIETN_WEB3_URL,
       zksync: true,
-    },
-    zkLinkTestnet: {
-      url: "https://sepolia.rpc.zklink.io",
-      ethNetwork: "sepolia",
-      zksync: true,
-      // contract verification endpoint
-      verifyURL: "https://sepolia.explorer.zklink.io/contract_verification",
-    },
-    zkLinkMainnet: {
-      url: "https://rpc.zklink.io",
-      ethNetwork: "mainnet",
-      zksync: true,
-      // contract verification endpoint
-      verifyURL: "https://explorer.zklink.io/contract_verification",
-    },
-    zkSyncTestnet: {
-      url: "https://zksync2-testnet.zksync.dev",
-      ethNetwork: "goerli",
-      zksync: true,
-      // contract verification endpoint
-      verifyURL: "https://zksync2-testnet-explorer.zksync.dev/contract_verification",
-    },
-    zkSyncTestnetSepolia: {
-      url: "https://sepolia.era.zksync.dev",
-      ethNetwork: "sepolia",
-      zksync: true,
-      // contract verification endpoint
-      verifyURL: "https://explorer.sepolia.era.zksync.dev/contract_verification",
-    },
-    zkSyncMainnet: {
-      url: "https://mainnet.era.zksync.io",
-      ethNetwork: "mainnet",
-      zksync: true,
-      // contract verification endpoint
-      verifyURL: "https://zksync2-mainnet-explorer.zksync.io/contract_verification",
+      verifyURL: process.env.CONTRACT_VERIFIER_URL,
     },
   },
 };

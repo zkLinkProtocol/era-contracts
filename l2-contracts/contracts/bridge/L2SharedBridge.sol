@@ -181,6 +181,7 @@ contract L2SharedBridge is IL2SharedBridge, Initializable {
     function withdraw(address _l1Receiver, address _l2Token, uint256 _amount) external override {
         require(_amount > 0, "Amount cannot be zero");
 
+        IL2StandardToken(_l2Token).bridgeBurn(msg.sender, _amount);
         _sendWithdrawalMessage(_l1Receiver, _l2Token, _amount);
     }
 

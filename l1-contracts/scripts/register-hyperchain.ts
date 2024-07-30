@@ -107,7 +107,7 @@ async function main() {
       }
 
       await deployer.registerHyperchain(baseTokenAddress, cmd.validiumMode, null, gasPrice, useGovernance);
-      await deployer.transferAdminFromDeployerToChainAdmin();
+      await deployer.transferAdminFromDeployerToChainAdmin(gasPrice);
     });
 
   await program.parseAsync(process.argv);

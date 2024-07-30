@@ -48,9 +48,33 @@ export default {
       },
     },
   },
-  etherscan: {
-    apiKey: process.env.MISC_ETHERSCAN_API_KEY,
-  },
+  etherscan: !process.env.CHAIN_ETH_NETWORK
+    ? {
+        apiKey: process.env.MISC_ETHERSCAN_API_KEY,
+      }
+    : {
+        apiKey: {
+          [process.env.CHAIN_ETH_NETWORK]: process.env.MISC_ETHERSCAN_API_KEY,
+        },
+        customChains: [
+          {
+            network: "linea",
+            chainId: 59144,
+            urls: {
+              apiURL: "https://api.lineascan.build/api",
+              browserURL: "https://lineascan.build/",
+            },
+          },
+          {
+            network: "lineaSepolia",
+            chainId: 59141,
+            urls: {
+              apiURL: "https://api-sepolia.lineascan.build/api",
+              browserURL: "https://sepolia.lineascan.build/",
+            },
+          },
+        ],
+      },
   gasReporter: {
     enabled: true,
   },

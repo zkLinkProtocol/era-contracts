@@ -330,7 +330,7 @@ contract DeployL1Script is Script {
 
     function deployBlobVersionedHashRetriever() internal {
         // solc contracts/state-transition/utils/blobVersionedHashRetriever.yul --strict-assembly --bin
-        bytes memory bytecode = hex"600b600b5f39600b5ff3fe5f358049805f5260205ff3";
+        bytes memory bytecode = hex"600c80600c6000396000f3fe6000354960005260206000f3";
         address contractAddress = deployViaCreate2(bytecode);
         console.log("BlobVersionedHashRetriever deployed at:", contractAddress);
         addresses.blobVersionedHashRetriever = contractAddress;

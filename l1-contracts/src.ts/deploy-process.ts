@@ -70,7 +70,7 @@ export async function initialBridgehubDeployment(
   await deployer.deploySharedBridgeContracts(create2Salt, gasPrice);
   await deployer.deployERC20BridgeImplementation(create2Salt, { gasPrice });
   await deployer.deployERC20BridgeProxy(create2Salt, { gasPrice });
-  await deployer.setParametersSharedBridge();
+  await deployer.setParametersSharedBridge(gasPrice);
 }
 
 export async function registerHyperchain(

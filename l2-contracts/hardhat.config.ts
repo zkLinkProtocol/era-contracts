@@ -25,7 +25,7 @@ export default {
   networks: {
     env: {
       url: process.env.API_WEB3_JSON_RPC_HTTP_URL,
-      ethNetwork: process.env.ETH_CLIETN_WEB3_URL,
+      ethNetwork: process.env.ETH_CLIENT_WEB3_URL,
       zksync: true,
       verifyURL: process.env.CONTRACT_VERIFIER_URL,
     },

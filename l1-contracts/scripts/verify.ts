@@ -112,18 +112,22 @@ async function main() {
   ]) {
     await verifyPromise(address);
   }
+
+  // Verify DiamondProxy, we get the real diamond cut from deploy log
   const chainId = process.env.ETH_CLIENT_CHAIN_ID;
-  await verifyPromise(addresses.StateTransition.DiamondProxy, [
-    chainId,
-    await deployer.initialZkSyncHyperchainDiamondCut(),
-  ]);
-
-  await verifyPromise(addresses.StateTransition.MailboxFacet, [eraChainId]);
-
-  await verifyPromise(addresses.StateTransition.StateTransitionImplementation, [
-    addresses.Bridgehub.BridgehubProxy,
-    getNumberFromEnv("CONTRACTS_MAX_NUMBER_OF_HYPERCHAINS"),
-  ]);
+  const dpI = new Interface(hardhat.artifacts.readArtifactSync("Diamond").abi);
+  const dcEventTopic = dpI.getEventTopic("DiamondCut");
+  const tr = await provider.getTransactionReceipt(process.env.CONTRACTS_HYPERCHAIN_DEPLOY_TX);
+  const logs = tr.logs.filter((log) => {
+    return log.topics[0] === dcEventTopic;
+  });
+  if (logs.length === 0) {
+    console.log("Diamond deploy log not found");
+    return;
+  }
+  const log = logs[0];
+  const dc = dpI.decodeEventLog("DiamondCut", log.data);
+  await verifyPromise(addresses.StateTransition.DiamondProxy, [chainId, dc]);
 
   const stateTransitionManager = new Interface(hardhat.artifacts.readArtifactSync("StateTransitionManager").abi);
   const genesisBatchHash = getHashFromEnv("CONTRACTS_GENESIS_ROOT"); // TODO: confusing name

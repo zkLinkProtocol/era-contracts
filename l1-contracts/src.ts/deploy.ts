@@ -752,6 +752,7 @@ export class Deployer {
       console.log(`CHAIN_ETH_ZKSYNC_NETWORK_ID=${parseInt(chainId, 16)}`);
 
       console.log(`CONTRACTS_BASE_TOKEN_ADDR=${baseTokenAddress}`);
+      console.log(`CONTRACTS_HYPERCHAIN_DEPLOY_TX=${receipt.transactionHash}`);
     }
     if (!predefinedChainId) {
       const diamondProxyAddress =

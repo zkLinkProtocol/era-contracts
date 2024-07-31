@@ -60,7 +60,7 @@ async function main() {
         verbose: true,
       });
 
-      await deployer.deploySharedBridgeImplementation(create2Salt, { nonce });
+      await deployer.deploySharedBridgeImplementation(create2Salt, { gasPrice, nonce });
 
       const proxyAdminInterface = new Interface(hardhat.artifacts.readArtifactSync("ProxyAdmin").abi);
       let calldata = proxyAdminInterface.encodeFunctionData("upgrade(address,address)", [
@@ -71,7 +71,7 @@ async function main() {
       await deployer.executeUpgrade(deployer.addresses.TransparentProxyAdmin, 0, calldata, gasPrice);
 
       // deploy a dummy erc20 bridge to set the storage values
-      await deployer.deployERC20BridgeImplementation(create2Salt, {}, true);
+      await deployer.deployERC20BridgeImplementation(create2Salt, { gasPrice }, true);
 
       // upgrade to dummy bridge
       calldata = proxyAdminInterface.encodeFunctionData("upgrade(address,address)", [

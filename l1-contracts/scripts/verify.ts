@@ -158,12 +158,7 @@ async function main() {
   ]);
 
   // bridges
-  await verifyPromise(
-    addresses.Bridges.ERC20BridgeImplementation,
-    [addresses.Bridges.SharedBridgeProxy],
-    undefined,
-    "contracts/bridge/L1ERC20Bridge.sol:L1ERC20Bridge"
-  );
+  await verifyPromise(addresses.Bridges.ERC20BridgeImplementation, [addresses.Bridges.SharedBridgeProxy]);
   const initCalldata3 = new Interface(hardhat.artifacts.readArtifactSync("L1ERC20Bridge").abi).encodeFunctionData(
     "initialize",
     []

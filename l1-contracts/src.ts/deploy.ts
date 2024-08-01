@@ -768,7 +768,6 @@ export class Deployer {
     this.chainId = parseInt(chainId, 16);
 
     const validatorOneAddress = getAddressFromEnv("ETH_SENDER_SENDER_OPERATOR_COMMIT_ETH_ADDR");
-    const validatorTwoAddress = getAddressFromEnv("ETH_SENDER_SENDER_OPERATOR_BLOBS_ETH_ADDR");
     const validatorTimelock = this.validatorTimelock(this.deployWallet);
     const txRegisterValidator = await validatorTimelock.addValidator(chainId, validatorOneAddress, {
       gasPrice,
@@ -784,15 +783,6 @@ export class Deployer {
     }
 
     nonce++;
-
-    const tx3 = await validatorTimelock.addValidator(chainId, validatorTwoAddress, {
-      gasPrice,
-      nonce,
-    });
-    const receipt3 = await tx3.wait();
-    if (this.verbose) {
-      console.log(`Validator 2 registered, gas used: ${receipt3.gasUsed.toString()}`);
-    }
 
     const diamondProxy = this.stateTransitionContract(this.deployWallet);
     const tx4 = await diamondProxy.setTokenMultiplier(1, 1, { gasPrice });

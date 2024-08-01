@@ -70,7 +70,6 @@ const expectedBootloaderHash = "0x010008e742608b21bf7eb23c1a9d0602047e3618b464c9
 const expectedDefaultAccountHash = "0x01000563374c277a2c1e34659a2a1e87371bb6d852ce142022d497bfb50b9e32";
 
 const validatorOne = process.env.ETH_SENDER_SENDER_OPERATOR_COMMIT_ETH_ADDR!;
-const validatorTwo = process.env.ETH_SENDER_SENDER_OPERATOR_BLOBS_ETH_ADDR!;
 
 const l1Provider = new ethers.providers.JsonRpcProvider(web3Url());
 
@@ -294,11 +293,6 @@ async function checkValidatorTimelock() {
   const validatorOneIsSet = await contract.validators(eraChainId, validatorOne);
   if (!validatorOneIsSet) {
     throw new Error("ValidatorTimelock validatorOne is not correct");
-  }
-
-  const validatorTwoIsSet = await contract.validators(eraChainId, validatorTwo);
-  if (!validatorTwoIsSet) {
-    throw new Error("ValidatorTimelock validatorTwo is not correct");
   }
 
   await checkCorrectInitCode(validatorTimelockDeployTx, contract, artifact.bytecode, [
